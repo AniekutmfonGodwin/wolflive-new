@@ -3,6 +3,11 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bot.settings')
 django.setup()
 
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+import sys
+sys.path.insert(0,os.path.join(BASE_DIR))
 
 # logic goes below
 

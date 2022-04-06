@@ -242,6 +242,8 @@ if __name__ == '__main__':
                 browser2 = WebDriver(username_2, password_2,room_link)
             is_login = True
             break
+        except KeyboardInterrupt:
+            break
         except Exception as e:
             print("no internet conenction,re-trying...\n",e)
             continue

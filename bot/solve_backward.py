@@ -52,6 +52,8 @@ class SolveBackward(
                     self.game_start = True
 
                 break
+            except KeyboardInterrupt:
+                break
             except:
                 continue
         while True:
@@ -144,17 +146,19 @@ class SolveBackward(
 
 
 if __name__ == '__main__':
-    username_1 = 'theloveeyes@yandex.ru'
-    password_1 = '951753'
+    username_1 = 'Komp@gmail.com'
+    password_1 = '123456'
     username_2 = 'Telek@gmail.com'
     password_2 = '123456'
-    room_link = 'https://wolf.live/g/18477646'
+    room_link = 'https://wolf.live/g/18900545'
     
     s:SolveBackward = None
     
     for _ in range(5):
         try:
             s = SolveBackward(username_1, password_1,room_link)
+            break
+        except KeyboardInterrupt:
             break
         except Exception as e:
             print("no internet conenction,re-trying...",e)

@@ -163,6 +163,8 @@ if __name__ == '__main__':
         try:
             browser = SolveMathsBot(username_1, password_1,room_link)
             break
+        except KeyboardInterrupt:
+            break
         except:
             print("no internet conenction,re-trying...")
             continue

@@ -1,7 +1,5 @@
-from dataclasses import dataclass,field
+from dataclasses import dataclass
 import re
-from selenium.webdriver.common.keys import Keys
-from dbOrm import dborm
 import random
 from time import sleep
 from main import *
@@ -180,6 +178,8 @@ if __name__ == '__main__':
     for _ in range(5):
         try:
             browser = SolveQuiz(username_1, password_1,room_link,private_url)
+            break
+        except KeyboardInterrupt:
             break
         except:
             print("no internet conenction,re-trying...")

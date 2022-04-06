@@ -54,12 +54,16 @@ class Guesswhat(
 
     def __post_init__(self):
         self.login()
-        self.driver.execute_script(f"window.open('{self.search_url}');")
-        self.goto_game()
+        self.goto_group()
         self.check_autoplay('!gw autoplay','GuessWhat')
         self.tracker.start()
         
 
+    def login(self):
+        res = super().login()
+        self.driver.execute_script(f"window.open('{self.search_url}');")
+        return res
+        
 
 
 
@@ -75,6 +79,7 @@ class Guesswhat(
             self.send_msg(f'!gw {self._category}')
         else:
             self.send_msg(f'!gw {category}')
+        self.tracker.wait(6)
             
 
     def restart(self):
@@ -87,13 +92,14 @@ class Guesswhat(
         self.category = None
         
 
-
+    
 
     # events
     # on_question
     # on_game_over
 
     def on_question(self):
+        print("\n\n on_question()")
         ele1 = self.get_latest_bot_msgs()[-1]
         ele2 = self.get_latest_bot_msgs()[-2]
         if ele1.get_attribute("render-tag")=="palringo-chat-message-image" or ele2.get_attribute("render-tag")=="palringo-chat-message-image":
@@ -140,8 +146,9 @@ class Guesswhat(
         self.guess = '|'.join(results)
         print(self.guess)
         # searching image
-        self.goto_game()
+        self.goto_group()
         for msg in results:
+            self.tracker.wait(5)
             self.send_msg(msg)
         while not self.is_bot() and not self.is_stop():
             pass
@@ -150,6 +157,7 @@ class Guesswhat(
 
 
     def on_game_over(self):
+        print("\n\n on_game_over()")
         if not self.get_latest_bot_msgs()[-1].get_attribute("render-tag")=="palringo-chat-message-image":
             text = self.get_last_bot_msg()
             if re.findall(r"Game over",text,re.I) and all([self.image_code,self.image_url,self.category,self.guess]):
@@ -172,7 +180,6 @@ class Guesswhat(
         result = re.findall(r"Wow.+guessed it in .+ seconds!",text,re.I)
         if result and all([self.image_code,self.image_url,self.category,self.guess]):
             answer = self.get_last_user_msg()
-            print("on answer",answer)
             data = {
                     "image_code":self.image_code,
                     "image_url":self.image_url,
@@ -195,19 +202,14 @@ class Guesswhat(
     # -get_image_src
     def get_last_image_src(self,ele):
         return self.qs.action(".shadowRoot").getOne(".message-outer.layout")\
-            .getOneShadowRoot('palringo-chat-message-image').getOne('#image-message').execute().get_attribute('src')
+            .getOneShadowRoot('palringo-chat-message-image').getOne('#image-message').execute(ele).get_attribute('src')
             
-        # return self.expand_shadow_element(
-        #     self.expand_shadow_element(ele)
-        # .find_element_by_css_selector('.message-outer.layout')
-        # .find_element_by_css_selector('palringo-chat-message-image')).find_element_by_css_selector('#image-message').get_attribute('src')
-    
-
-    
-    def goto_game(self):
-        self.driver.switch_to.window(self.driver.window_handles[0])
+   
         
     def goto_search(self):
+        print("\n\n goto_search()")
+        if len(self.driver.window_handles) < 2:
+            self.driver.execute_script(f"window.open('{self.search_url}');")
         self.driver.switch_to.window(self.driver.window_handles[1])            
         
         
@@ -222,17 +224,10 @@ class Guesswhat(
 
 
         
-
-
-        
-     
-
-# %%
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    room_link = 'https://wolf.live/g/18336134'
-
+    room_link = 'https://wolf.live/g/18900545'
     search = None
     if config["Guesswhat"]["search_engine"] == "bing":
         search = search_image_by_bing
@@ -242,19 +237,19 @@ if __name__ == '__main__':
     gw = Guesswhat(username_1,password_1,search,room_link = room_link)
 
     categories = [
-            'Celebrities',
-            'Logos',
-            'Music',
-            'Anime',
-            'Close Ups',
-            'Around The World',
-            'Mixed',
-            'Sports',
-            'Food',
-            'Nature',
-            '4in1',
-            'Shuffled'
-            ]        
+        'Celebrities',
+        'Logos',
+        'Music',
+        'Anime',
+        'Close Ups',
+        'Around The World',
+        'Mixed',
+        'Sports',
+        'Food',
+        'Nature',
+        '4in1',
+        'Shuffled'
+    ]        
                 
     # %%
     gw.start(categories[0])
@@ -270,6 +265,13 @@ if __name__ == '__main__':
 
 
     gw.close()
+
+        
+     
+
+# %%
+if __name__ == '__main__':
+    main()
 # %%
 # gw.get_last_user_msg(index=-2)
     

@@ -268,7 +268,7 @@ class WebDriver:
         """
         length = self.get_latest_msgs().action(".length").execute() -1 + index
         try:
-            return self.get_latest_msgs().action(f"[{length}].shadowRoot").getOne("palringo-chat-message-text").action(".text").execute()
+            return self.get_latest_msgs().action(f"[{length}].shadowRoot").getOne("palringo-chat-message-text").execute().text
         except:
             return ''
 
@@ -285,8 +285,7 @@ class WebDriver:
         function get the latestest message in test form
         """
         try:
-            return self.qs.action(".shadowRoot").getOneShadowRoot('palringo-chat-message-text').action(".text").execute(self.get_latest_bot_msgs(private=private)[index])
-            # return self.expand_shadow_element(self.get_latest_bot_msgs()[index]).find_element_by_css_selector('palringo-chat-message-text').text
+            return self.qs.action(".shadowRoot").getOne('palringo-chat-message-text').execute(self.get_latest_bot_msgs(private=private)[index]).text
         except:
             return ''
 
@@ -303,8 +302,7 @@ class WebDriver:
             if not elements:
                 return ""
             element = elements[index]
-            return self.qs.action(".shadowRoot").getOneShadowRoot("palringo-chat-message-text").action(".text").execute(element)
-            # return self.expand_shadow_element().find_element_by_css_selector('palringo-chat-message-text').text
+            return self.qs.action(".shadowRoot").getOne("palringo-chat-message-text").execute(element).text
         except Exception as e:
             print("\n\n erro while getting user message ",e)
             return ''

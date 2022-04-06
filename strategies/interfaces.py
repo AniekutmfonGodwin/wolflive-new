@@ -124,6 +124,10 @@ class CheckStrategyInterface(ABC):
     def message_box_exists(self,private:Optional[bool]=False)->bool:
         ...
 
+    @property
+    @abstractmethod
+    def is_debug(self)->bool:
+        ...
 
 
 class LoginStrategyInterface(ABC):

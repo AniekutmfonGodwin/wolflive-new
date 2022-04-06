@@ -338,7 +338,8 @@ class Hangman(
 if __name__ == "__main__":
     username_1 = "Komp@gmail.com"
     password_1 = "123456"
-    hm = Hangman(username_1,password_1)
+    room_link = 'https://wolf.live/g/18900545'
+    hm = Hangman(username_1,password_1,room_link=room_link)
     hm.tracker.wait(seconds=1)
     hm.start_game()
     while not hm.is_stop():
@@ -351,6 +352,8 @@ if __name__ == "__main__":
             hm.is_not_correct()
             hm.is_done()
             hm.is_game_over()
+        except KeyboardInterrupt:
+            break
         except Exception as e:
             print("error\n",e)
             hm.driver.refresh()

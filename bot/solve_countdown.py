@@ -1,11 +1,9 @@
+# %%
 from dataclasses import dataclass,field
 import re
-import sys
-import os
-import time
+from bot.main import *
 from countdown_numbers_solver import get_expression_from_data
 from time import sleep
-from main import *
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 
 
@@ -37,6 +35,8 @@ class SolveCountdown(
             while True and not self.stop:
                 try:
                     self.main()
+                except KeyboardInterrupt:
+                    break
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
@@ -45,6 +45,8 @@ class SolveCountdown(
                 try:
                     if self.stop:break
                     self.main()
+                except KeyboardInterrupt:
+                    break
                 except Exception as e:
                     print("error from main method\n",e)
 
@@ -163,6 +165,8 @@ class SolveCountdown(
                     self.game_start = True
 
                 break
+            except KeyboardInterrupt:
+                break
             except:
                 continue
         
@@ -193,17 +197,20 @@ class SolveCountdown(
                 print("you stoped the game")
                 self.stop = True
                 break
-        
-if __name__ == '__main__':
+
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     username_2 = 'Telek@gmail.com'
     password_2 = '123456'
-    room_link = 'https://wolf.live/g/18510546'
+    room_link = 'https://wolf.live/g/18900545'
     sc:SolveCountdown = None
     for _ in range(5):
         try:
             sc = SolveCountdown(username_1, password_1,room_link)
+            break
+        except KeyboardInterrupt:
+            print("interrupt")
             break
         except:
             print("no internet conenction,re-trying...")
@@ -213,6 +220,13 @@ if __name__ == '__main__':
     if sc:sc.tracker.wait(2)
     if sc:sc.close()
         
+if __name__ == '__main__':
+    main()
+
+# %%
+# main()
+        
             
             
         
+# %%

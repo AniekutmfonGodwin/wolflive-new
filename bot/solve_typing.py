@@ -121,7 +121,7 @@ class SolveTyping(
 if __name__ == '__main__':
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    room_link = 'https://wolf.live/g/18513226'
+    room_link = 'https://wolf.live/g/18900545'
     
     browser = None
     
@@ -129,6 +129,8 @@ if __name__ == '__main__':
     for _ in range(5):
         try:
             browser = SolveTyping(username_1, password_1,room_link)
+            break
+        except KeyboardInterrupt:
             break
         except:
             print("no internet conenction,re-trying...")

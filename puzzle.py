@@ -36,8 +36,8 @@ class Puzzle(
 ):
     username:str
     password:str
-    private_url:Optional[str] ='https://wolf.live/u/80277459'
     room_link:Optional[str] = 'https://wolf.live/g/18900545'
+    private_url:Optional[str] ='https://wolf.live/u/80277459'
     moves:List[str] = field(default=list)
     remaining_puzzle:List[str] = field(default=list)
     image_links:List[str] = field(default=list)
@@ -73,6 +73,7 @@ class Puzzle(
 
 
     def play(self):
+        if self.is_debug:print("\n\n play()")
         self.remaining_puzzle = self.get_puzzle_number()
         if not self.remaining_puzzle:return
         start_position = self.remaining_puzzle[0]
@@ -93,6 +94,7 @@ class Puzzle(
 
     # task
     def start_game(self,difficulty='',*args, **kwargs):
+        if self.is_debug:print("\n\n start_game(difficulty={difficulty},{args},{kwargs})")
         self.stop_on_user = False
         self.stop_loop = False
         logger.info("start game")
@@ -101,6 +103,7 @@ class Puzzle(
 
 
     def end_game(self,*args, **kwargs):
+        if self.is_debug:print("\n\n end_game({args},{kwargs})")
         self.stop_on_user = True
         self.stop_loop = True
         logger.info("ended game")
@@ -108,18 +111,13 @@ class Puzzle(
         self.send_msg("!puzzle end")
 
     def get_frame_element(self,*args, **kwargs):
+        print("\n\n get_frame_element({args},{kwargs})")
         element = self.get_last_puzzle_question()[-1]
         return self.qs.action(".shadowRoot").getOneShadowRoot("palringo-chat-message-pack").getOne("#content").execute(element)
 
-        # return self.expand_shadow_element(
-        #     self.expand_shadow_element(
-        #             self.get_last_puzzle_question()[-1]
-        #         ).find_element_by_tag_name("palringo-chat-message-pack")
-        #     ).find_element_by_css_selector("#content") 
-
-    
 
     def get_puzzle_number(self,element=None,*args, **kwargs):
+        print("\n\n get_puzzle_number(element={element},{args},{kwargs})")
         logger.info("get puzzle number")
         print("get puzzle number")
         
@@ -191,7 +189,7 @@ class Puzzle(
     
 
     def on_already_a_game(self,func:Optional[callable]=None,negate=False,*args, **kwargs):
-        print(f"\n\n on_already_a_game({func},{negate},{args},{kwargs})")
+        if self.is_debug:print(f"\n\n on_already_a_game({func},{negate},{args},{kwargs})")
         print(" am here ")
         message = self.get_last_bot_msg(index=-2)
         condition = "There's already an active puzzle in this group" in message
@@ -264,13 +262,16 @@ class Puzzle(
 # %%
 if __name__ == '__main__':
     
-    # room_link = "https://wolf.live/g/18336134"
-    username = 'jeremy.trac@appzily.com'
-    password = '951753'
-    puzzle = Puzzle(username,password)
+    room_link = 'https://wolf.live/g/18900545'
+    private_url ='https://wolf.live/u/80277459'
+    username = 'Komp@gmail.com'
+    password = '123456'
+    puzzle = Puzzle(username,password,room_link,private_url)
     for _ in range(100):
         try:
             puzzle.run()
+        except KeyboardInterrupt:
+            break
         except StaleElementReferenceException:
             print("element not attach to the dom,refreshing")
             if puzzle.driver:puzzle.driver.refresh()

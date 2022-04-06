@@ -3,7 +3,7 @@ import re
 import json
 import time
 from time import sleep
-# from main import *
+from main import *
 from threading import Timer
 
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
@@ -210,6 +210,8 @@ if __name__ == '__main__':
     for _ in range(5):
         try:
             browser = SolveScramble(username_1, password_1,room_link,file_path)
+            break
+        except KeyboardInterrupt:
             break
         except Exception as e:
             print("error",e)

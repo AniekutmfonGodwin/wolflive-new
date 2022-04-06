@@ -99,13 +99,16 @@ class Deciper_Bot(
 if __name__ == "__main__":
     username_1 = "Komp@gmail.com"
     password_1 = "123456"
-    d = Deciper_Bot(username_1,password_1)
+    room_link = 'https://wolf.live/g/18900545'
+    d = Deciper_Bot(username_1,password_1,room_link)
     sleep(2)
     d.start()
     while not d.is_stop():
         try:
             d.get_answer()
             d.on_success()
+        except KeyboardInterrupt:
+            break
         except:
             pass
         

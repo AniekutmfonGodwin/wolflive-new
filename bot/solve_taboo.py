@@ -101,6 +101,8 @@ if __name__ == '__main__':
             browser.driver.execute_script(f"window.open('{private_url}');")
             is_login = True
             break
+        except KeyboardInterrupt:
+            break
         except:
             print("no internet conenction,re-trying...")
             continue

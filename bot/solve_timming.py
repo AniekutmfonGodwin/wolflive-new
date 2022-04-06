@@ -106,13 +106,15 @@ if __name__ == '__main__':
     password_1 = '123456'
     username_2 = 'Telek@gmail.com'
     password_2 = '123456'
-    room_link = 'https://wolf.live/g/18336134'
+    room_link = 'https://wolf.live/g/18900545'
     
     browser = None
     
     for _ in range(5):
         try:
             browser = SolveTimming(username_1, password_1,room_link)
+            break
+        except KeyboardInterrupt:
             break
         except:
             print("no internet conenction,re-trying...")
