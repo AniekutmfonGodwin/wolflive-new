@@ -1,6 +1,7 @@
 # %%
 from dataclasses import dataclass
 from typing import Optional
+from strategies.exceptions import StopBot, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 import sys
 
@@ -23,59 +24,75 @@ class Jockey_Bot(
         self.login()
     
     def restart(self, *args, **kwargs):
-        print("\n\n restart()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
         self.main()
         
 
 
     def train_for_speed(self):
-        print("\n\n train_for_speed()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_speed()")
         self.send_message_private("!سباق تدريب كل 100")
 
     # utility
     def train(self):
-        print("\n\n train()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train()")
+        self.tracker.start(hours=2)
         self.tracker.wait(seconds=10)
         while not self.is_stop():
-            self.goto_private()
-            self.train_for_agile()
-            self.train_for_speed()
-            self.tracker.wait(seconds=60)
-            self.train_for_stamina()
-            self.tracker.wait(seconds = 60)
-            print("\n\n running")
+            try:
+                self.goto_private()
+                self.train_for_agile()
+                self.train_for_speed()
+                self.tracker.wait(seconds=60)
+                self.train_for_stamina()
+                self.tracker.wait(seconds = 60)
+                print(f"\n\n [{self.__class__}]{self.__class__.__name__}() running")
+                self.tracker.reset()
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt("stop bot by keyboard interrupt")
+
+            except StopBotError:
+                raise StopBotError("stop bot by bot interrupt")
+            except Exception:
+                self.tracker.wait(self.tracker.get_time)
+                
 
     def race(self):
-        print("\n\n race()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().race()")
         self.send_msg("!س جلد")
             
 
 
     def train_for_stamina(self):
-        print("\n\n train_for_stamina()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_stamina()")
         self.send_message_private("!سباق تدريب كل 100")
         
     def train_for_agile(self):
-        print("\n\n train_for_agile()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_agile()")
         self.send_message_private("!سباق تدريب كل 100")
 
     def main(self):
-        print("\n\n main()")
-    
-# %%
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
 
-if __name__ == "__main__":
-    username_1 = "jeremy.trac@appzily.com"
-    password_1 = "951753"
-    j = Jockey_Bot(username_1,password_1)
+def main():
+    # username = "jeremy.trac@appzily.com"
+    # password = "951753"
+    username = "Komp@gmail.com"
+    password = "123456"
+    j = Jockey_Bot(username,password)
     action = sys.argv[1] if len(sys.argv) >1 else "train"
     
     if action == 'train':j.train()
     if action == 'race':
         j.race()
         j.tracker.wait(seconds=10)
-        print("\n\n racing completed")
+        print("\n\n  racing completed")
     j.close() 
+    
+# %%
+
+if __name__ == "__main__":
+    main()
     
     
     

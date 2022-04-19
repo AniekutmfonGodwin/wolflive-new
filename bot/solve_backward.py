@@ -37,6 +37,8 @@ class SolveBackward(
 
                     if self.stop:break
                     self.main()
+                except KeyboardInterrupt:
+                    raise KeyboardInterrupt()
                 except Exception as e:
                     print("error from main method\n",e)
 
@@ -144,12 +146,11 @@ class SolveBackward(
 
     
 
-
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    username_2 = 'Telek@gmail.com'
-    password_2 = '123456'
+    # username_2 = 'Telek@gmail.com'
+    # password_2 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     
     s:SolveBackward = None
@@ -159,7 +160,7 @@ if __name__ == '__main__':
             s = SolveBackward(username_1, password_1,room_link)
             break
         except KeyboardInterrupt:
-            break
+            raise KeyboardInterrupt()
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -168,3 +169,6 @@ if __name__ == '__main__':
     if s:s.tracker.wait(2)
     
     if s:s.close()
+
+if __name__ == '__main__':
+    main()

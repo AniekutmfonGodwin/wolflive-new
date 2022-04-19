@@ -1,11 +1,12 @@
 from dataclasses import dataclass,field
 import re
+from main import *
 from typing import Any, Dict, Optional
 import requests
 from bs4 import BeautifulSoup
 from time import sleep
 from game.models import Gap
-from main import *
+from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 from workspace import workspace
 
@@ -31,7 +32,7 @@ from workspace import workspace
 # get_answer(question)
 
 @dataclass
-class solve_fill_the_gap(
+class SolveFillTheGap(
     BaseWolfliveStrategy,
     LoginStrategy,
     GetMessageStrategy,
@@ -52,6 +53,10 @@ class solve_fill_the_gap(
 
     def __post_init__(self):
         self.login()
+    
+
+    def run(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run()")
         self.workspace = {
             "question":None,
             "anwser":None,
@@ -89,17 +94,22 @@ class solve_fill_the_gap(
         
         
     def get_answer(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_answer()")
         try:
             data = self.get_latest_msgs().execute()[-3].text
             if data:
                 return re.findall(r'([a-zA-Z]+)',data)[0]
-            
-        except:
-            pass
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().get_answer({e})")
 
 
 
     def setup_status(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
         """method set autoplay mode"""
         if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
             self.autoplay = True
@@ -110,17 +120,18 @@ class solve_fill_the_gap(
         elif status=='OFF':
             if self.autoplay:
                 self.toggle_autoplay()
-        else:
-            self.toggle_autoplay()
+        
+        
 
 
     
     def check_autoplay_status(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
         """method check for the current autoplay status"""
         self.send_msg('!gap autoplay Music')
         self.wait_and_get_user_message()
         response = self.wait_and_get_bot_message()
-        res =  re.findall(r'Autoplay is turned (ON|OFF)',response,re.I)
+        res =  re.findall(r'Autoplay .* (On|Off)',response,re.I)
         if res:
             return res[0]
         else:
@@ -128,6 +139,7 @@ class solve_fill_the_gap(
         
 
     def toggle_autoplay(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
         """method toggle autoplay"""
         if self.category:
             self.send_msg(f'!gap autoplay {self.category}')
@@ -137,20 +149,21 @@ class solve_fill_the_gap(
 
 
     def main(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
         """the loop"""
         self.start_game()
         while True:
             if self.is_done():
                 # self.update_workspace(answer=self.locate_answer())
                 
-                print("we've got a winner")
+                print("\n\n we've got a winner")
                 _answer = self.get_answer()
                 _question = self.workspace.get("question")
                 if  Gap.objects.filter(question=self.workspace.get("question"),category=self.workspace.get("category").lower()).exists():
                     gp = Gap.objects.get(question =_question)
                     gp.answer = _answer
                     gp.save()
-                    print("answer saved")
+                    print("\n\n answer saved")
 
                 # if _question and not Gap.objects.filter(question=_question).exists():
                 #     Gap.objects.create(question=_question,answer=_answer,category=self.workspace.get("category").lower())
@@ -158,20 +171,13 @@ class solve_fill_the_gap(
                 self.tracker.wait(1)
                 self.drop_workspace()
                 self.tracker.wait(1)
-                # print("droped",self.workspace)
+                self.start_game()
 
-            # if self.is_bot():
-            #     # timer code
-            #     print("is bot")
-            #     check_timer = self.timer
-            #     if check_timer:check_timer.cancel()
-            #     t=Timer(60.0,self.start_game_by_pass)
-            #     self.timer = t
-            #     t.start()
+            
 
             if self.is_question():
                 self.drop_workspace()
-                print("is question")
+                print("\n\n is question")
                 __question = self.get_question()
                 category = self.get_category()
                 self.update_workspace(question=__question,category=category)
@@ -183,7 +189,7 @@ class solve_fill_the_gap(
 
                     if __answer and not self.is_gameover():
                         self.send_msg(__answer)
-                        print("answer is :",__answer)
+                        print("\n\n answer is :",__answer)
 
                         # save to database
                         if not Gap.objects.filter(question=self.workspace.get("question")).exists():
@@ -200,7 +206,7 @@ class solve_fill_the_gap(
 
 
             if self.is_gameover():
-                print("game over")
+                print("\n\n game over")
                 self.game_start = False
                 # print("droped",self.workspace)
                 break
@@ -211,7 +217,7 @@ class solve_fill_the_gap(
 
 
             if self.is_stop_game():
-                print("you stoped the game")
+                print("\n\n you stoped the game")
                 if self.workspace.get("timer"):self.workspace.get("timer").cancel()
                 self.drop_workspace()
                 self.stop = True
@@ -222,6 +228,7 @@ class solve_fill_the_gap(
     
 
     def start_game(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().start_game()")
         for _ in range(10):
             try:
                 if self.autoplay and not self.game_start:
@@ -238,10 +245,16 @@ class solve_fill_the_gap(
                         self.send_msg('!gap')
                     self.game_start = True
                 break
-            except:
+            except StopBotError:
+                raise StopBotError
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
+            except Exception as e:
+                print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().start_game({e})")
                 continue
 
     def start_game_by_pass(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().start_game_by_pass()")
         for _ in range(10):
             try:
                 print("start game from thread")
@@ -251,7 +264,12 @@ class solve_fill_the_gap(
                     self.send_msg('!gap')
                 self.game_start = True
                 break
-            except:
+            except StopBotError:
+                raise StopBotError
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
+            except Exception as e:
+                print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().start_game_by_pass({e})")
                 continue
             
 
@@ -259,62 +277,89 @@ class solve_fill_the_gap(
     
 
     def wait_and_get_user_message(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_user_message()")
         for _ in range(10):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if not re.search('bot\n',text,re.IGNORECASE):
                 return text
-        sleep(1)
+        self.tracker.wait(1)
 
     def is_stop_game(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
-            return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
-        except:
+            return bool(re.findall(r'!stop',self.get_last_element().text,flags=re.IGNORECASE))
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game({e}) ")
             self.driver.refresh()
             return
 
-
+    
 
 
     def is_bot(self):
         try:
-            text = self.get_last_msg()
-            if re.findall('bot\n',text,re.IGNORECASE):
-                return text
-        except:
+            super().is_bot()
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().is_bot({e})")
             self.driver.refresh()
             return
 
     def wait_and_get_bot_message(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
         for _ in range(10):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if re.search('bot\n',text,re.IGNORECASE):
                 return text
-            sleep(1)
+            self.tracker.wait(1)
 
     def is_question(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question()")
         return bool(re.search(r".*_ _ _ _.*",self.get_last_msg(),flags=re.IGNORECASE))
 
     def get_question(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_question()")
         try:
             return re.findall(r".*_ _ _ _.*\n*",self.get_last_msg(),flags=re.IGNORECASE)[0]
-        except:
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().get_question({e})")
             return False
 
     def get_category(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_category()")
         try:
             return re.findall(r"category: ([a-zA-Z]+)",self.get_last_msg(),flags=re.IGNORECASE)[0]
-        except:
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_category({e}) error")
             return False
 
     def is_gameover(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_gameover()")
         return bool(re.search(r'game over',self.get_last_msg(),flags=re.IGNORECASE))
 
     def is_done(self):
-        for x in self.get_latest_msgs()[-2:]:
-            return bool(re.search(r'Here are the winners',x.text,flags=re.IGNORECASE))
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done()")
+        text = "".join([x.text for x in self.get_latest_msgs().execute()[-2:]])
+        return bool(re.search(r'Here are the winners',text,flags=re.IGNORECASE))
         
 
     def is_web_bot_protection(self,text=''):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_web_bot_protection()")
         return bool(re.search(r'Our systems have detected unusual traffic from your computer network',text,flags=re.IGNORECASE))
 
 
@@ -323,20 +368,18 @@ class solve_fill_the_gap(
 
 
     def predict(self,question):
-
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().predict()")
         try:
             
             # check from database
             if question and Gap.objects.filter(question=question).exists():
                 gap = Gap.objects.get(question=question)
                 if gap.answer:
-                    print("running from database")
+                    print(f"\n\n [{self.__class__}]{self.__class__.__name__}().predict({gap.answer.strip()}) running from database")
                     return gap.answer.strip()
 
-            print("request")
             if question:
-
-
+                print(f"\n\n [{self.__class__}]{self.__class__.__name__}().predict() using request")
                 url = 'https://www.lyrics.com/lyrics/'+ re.sub(r'[ ]*_[^,]+_[ ]*','',question)
                 response = requests.get(url)
                 soup = BeautifulSoup(response.content,'html.parser')
@@ -366,26 +409,32 @@ class solve_fill_the_gap(
                             pattern_words = re.findall(r'[a-zA-Z0-9\']+',pattern)
                             answer_words = re.findall(r'[a-zA-Z0-9\']+',answer_raw[0])
                             answer = list(filter(check,answer_words))[0]
-
+                            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().predict({answer.strip()}) using request")
                             return answer.strip()
-                        
-        except:
+        except StopBotError:
+            raise StopBotError
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except Exception as e:
+            print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().predict({e})")
             return None
+        
 
-
-
-
-
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    room_link = 'https://wolf.live/g/18477707'
+    room_link = 'https://wolf.live/g/18900545'
     
-    s:solve_fill_the_gap = None
+    s:SolveFillTheGap = None
     for _ in range(5):
         try:
-            s = solve_fill_the_gap(username_1, password_1,room_link)
+            s = SolveFillTheGap(username_1, password_1,room_link)
+            s.run()
             break
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt()
+        except StopBotError:
+            raise StopBotError()
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             if s:s.close()
@@ -393,6 +442,11 @@ if __name__ == '__main__':
     
     sleep(2)
     s.close()
+
+
+
+if __name__ == '__main__':
+    main()
         
         
     

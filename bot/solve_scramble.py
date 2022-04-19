@@ -192,16 +192,16 @@ class SolveScramble(
 
     def get_question(self,text=''):
         return re.findall(r'\|> ([a-zA-Z0-9]+) <\|',text)[0]
-        
 
 
-if __name__ == '__main__':
+
+def main():
     import os
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     file_path = os.path.join(os.path.dirname(__file__),"words_dictionary.json")
     
-    room_link = 'https://wolf.live/g/18336134'
+    room_link = 'https://wolf.live/g/18900545'
     
 
     browser:SolveScramble = None
@@ -219,9 +219,12 @@ if __name__ == '__main__':
             continue
     
     
-    
-    
     if browser:browser.close()
+
+
+
+if __name__ == '__main__':
+    main()
 
 
     

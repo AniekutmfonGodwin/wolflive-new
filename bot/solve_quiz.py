@@ -3,6 +3,7 @@ import re
 import random
 from time import sleep
 from main import *
+import main
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 
 
@@ -19,10 +20,10 @@ class SolveQuiz(
     room_link:str
     private_url:str
 
-    def __post_init__(self,browser):
+    def __post_init__(self):
         self.login()
         
-        self.browser = browser
+        # self.browser = browser
         # self.browser.driver.switch_to.window(self.browser.driver.window_handles[0])
         
         for _ in range(int(input("how many time do you want me to play the game \ne.g 10\n"))):
@@ -77,8 +78,8 @@ class SolveQuiz(
 
 
     def get_answer(self,question,choice):
-        if Quiz.objects.filter(question=question.get('question')).exists():
-            data = Quiz.objects.get(question=question.get('question'))
+        if main.Quiz.objects.filter(question=question.get('question')).exists():
+            data = main.Quiz.objects.get(question=question.get('question'))
             if data.answer:
                 option = [x for x in list(question)[2:6] if data.answer in question[x]]
                 if option:
@@ -140,8 +141,8 @@ class SolveQuiz(
                         
 
                         choice = random.choice(['a','b','c','d'])
-                        if not Quiz.objects.filter(question=question.get('question')).exists():
-                            Quiz.objects.create(question=question.get("question"),optiona=question.get("optiona"),optionb=question.get("optionb"),optionc=question.get("optionc"),optiond=question.get("optiond"),guess=choice)
+                        if not main.Quiz.objects.filter(question=question.get('question')).exists():
+                            main.Quiz.objects.create(question=question.get("question"),optiona=question.get("optiona"),optionb=question.get("optionb"),optionc=question.get("optionc"),optiond=question.get("optiond"),guess=choice)
                         answer = self.get_answer(question,choice)
                         # print(answer)
                         self.send_message_private(answer)
@@ -152,8 +153,8 @@ class SolveQuiz(
                             question['answer'] = question.get(f'option{choice}')
                             # print("quetion",question)
                             # self.add(**question)
-                            if Quiz.objects.filter(question=question.get("question"),answer='').exists():
-                                qz = Quiz.objects.get(question=question.get("question"))
+                            if main.Quiz.objects.filter(question=question.get("question"),answer='').exists():
+                                qz = main.Quiz.objects.get(question=question.get("question"))
                                 qz.answer = answer=question.get("answer")
                                 qz.save()
                             
@@ -163,11 +164,10 @@ class SolveQuiz(
 
 
 
-
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    room_link = 'https://wolf.live/g/18336134'
+    room_link = 'https://wolf.live/g/18900545'
     private_url = 'https://wolf.live/u/72810009'
     
 
@@ -180,10 +180,14 @@ if __name__ == '__main__':
             browser = SolveQuiz(username_1, password_1,room_link,private_url)
             break
         except KeyboardInterrupt:
-            break
-        except:
-            print("no internet conenction,re-trying...")
-            continue
+            raise KeyboardInterrupt()
+        # except:
+        #     print("no internet conenction,re-trying...")
+        #     continue
     
     
     if browser:browser.close()
+
+
+if __name__ == '__main__':
+    main()

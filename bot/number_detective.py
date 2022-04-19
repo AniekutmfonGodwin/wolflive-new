@@ -23,7 +23,7 @@ class WebDriver(
 ############ NUMBER DETECTIVE ################
 ##############################################
 
-class solve_number_detective:
+class SolveNumberDetective:
     def __init__(self,browser1,browser2):
         self.browser1:WebDriver = browser1
         self.browser2:WebDriver = browser2
@@ -215,17 +215,12 @@ class solve_number_detective:
 
 
 
-
-
-
-
-
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     username_2 = 'Telek@gmail.com'
     password_2 = '123456'
-    room_link = 'https://wolf.live/g/18405280'
+    room_link = 'https://wolf.live/g/18900545'
     # from games_bot import WebDriver
 
     
@@ -249,12 +244,18 @@ if __name__ == '__main__':
             continue
     
     
-    sleep(2)
+    sleep(5)
     if is_login:    
-        solve_number_detective(browser,browser2)
+        SolveNumberDetective(browser,browser2)
         browser.driver.quit()
         browser2.driver.quit()
     if browser:browser.driver.quit()
     if browser2:browser2.driver.quit()
+
+
+
+
+if __name__ == '__main__':
+    main()
         
         

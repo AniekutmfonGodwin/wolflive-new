@@ -1,7 +1,8 @@
 # %%
 from dataclasses import dataclass,field
 import re
-from bot.main import *
+from main import *
+import main
 from countdown_numbers_solver import get_expression_from_data
 from time import sleep
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
@@ -31,12 +32,14 @@ class SolveCountdown(
     def __post_init__(self):
         self.login()
         self.setup_status()
+    
+    def run(self):
         if self.autoplay:
             while True and not self.stop:
                 try:
                     self.main()
                 except KeyboardInterrupt:
-                    break
+                    raise KeyboardInterrupt()
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
@@ -46,7 +49,7 @@ class SolveCountdown(
                     if self.stop:break
                     self.main()
                 except KeyboardInterrupt:
-                    break
+                    raise KeyboardInterrupt()
                 except Exception as e:
                     print("error from main method\n",e)
 
@@ -79,11 +82,14 @@ class SolveCountdown(
 
     def toggle_autoplay(self):
         self.send_msg('!cd autoplay')
+        self.tracker.wait(5)
 
 
     def is_stop_game(self):
         try:
             return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt()
         except:
             self.driver.refresh()
             return
@@ -97,6 +103,8 @@ class SolveCountdown(
             target = int(re.findall(r'\d+',data[0])[0])
             values = [int(x) for x in re.findall(r'\d+',data[1])]
             return {"target":target,"values":values}
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt()
         except:
             return False
 
@@ -104,6 +112,8 @@ class SolveCountdown(
         try:
             if re.search(r'Calculate',text,re.IGNORECASE):
                 return text
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt()
         except:
             return False
 
@@ -132,15 +142,16 @@ class SolveCountdown(
 
 
     def wait_and_get_bot_message(self):
+        self.get_last_element()
         for _ in range(40):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if re.search('bot\n',text,re.IGNORECASE):
                 return text
         sleep(1)
 
     def wait_and_get_user_message(self):
         for _ in range(40):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if not re.search('bot\n',text,re.IGNORECASE):
                 return text
         sleep(1)
@@ -166,7 +177,7 @@ class SolveCountdown(
 
                 break
             except KeyboardInterrupt:
-                break
+                raise KeyboardInterrupt()
             except:
                 continue
         
@@ -201,13 +212,14 @@ class SolveCountdown(
 def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    username_2 = 'Telek@gmail.com'
-    password_2 = '123456'
+    # username_2 = 'Telek@gmail.com'
+    # password_2 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     sc:SolveCountdown = None
     for _ in range(5):
         try:
             sc = SolveCountdown(username_1, password_1,room_link)
+            sc.run()
             break
         except KeyboardInterrupt:
             print("interrupt")

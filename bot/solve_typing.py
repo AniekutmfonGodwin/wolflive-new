@@ -116,9 +116,10 @@ class SolveTyping(
 
     def is_done(self,text=''):
         return bool(re.search(r'Congrats',text,flags=re.IGNORECASE))
-    
 
-if __name__ == '__main__':
+
+
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     room_link = 'https://wolf.live/g/18900545'
@@ -136,5 +137,9 @@ if __name__ == '__main__':
             print("no internet conenction,re-trying...")
             continue
     
+    if browser:browser.driver.quit() 
+
     
-    if browser:browser.driver.quit()
+
+if __name__ == '__main__':
+    main()

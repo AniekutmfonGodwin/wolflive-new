@@ -78,7 +78,6 @@ class WebDriver:
         # self.driver = webdriver.Edge(executable_path=edgedriver_path)
         # self.driver = webdriver.Firefox(executable_path=firefoxdriver_path)
         self.driver.set_page_load_timeout(80)
-        self.is_login = False
         
 
         try:
@@ -90,9 +89,8 @@ class WebDriver:
                     if retry > 5:
                         raise Exception("maximum retry has been reached")
                     self.driver.refresh()
-            self.is_login = True
         except Exception as e:
-            print("\n\n error ",e)
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}(). error ",e)
             self.driver.quit()
             raise Exception("couldn't login")
 
@@ -105,13 +103,13 @@ class WebDriver:
 
 			
     def restart(self,*args, **kwargs):
-        print("\n\n restart()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
         raise NotImplementedError
 
     def restart_if_stalk(self,sec=60.0):
-        print("\n\n restart_if_stalk()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart_if_stalk()")
         """start is called if after "sec" second this method is not called"""
-        print("\n\n timer set for ",sec," second(s)")
+        print(f"\n\n timer set for ",sec," second(s)")
         if self.task:
             self.task.cancel()
             self.task = None
@@ -121,7 +119,7 @@ class WebDriver:
         
 
     def check_autoplay(self,cmd,config_section):
-        print("\n\n check_autoplay()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay()")
         self.send_msg(cmd)
         for _ in range(20):
             if self.is_bot():
@@ -134,17 +132,17 @@ class WebDriver:
 
 
     def toggle_autoplay(self,cmd):
-        print("\n\n toggle_autoplay()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
         self.send_msg(cmd)
 
         
     def expand_shadow_element(self, element):
-        print("\n\n expand_shadow_element()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().expand_shadow_element()")
         shadow_root = self.driver.execute_script('return arguments[0].shadowRoot',element)
         return shadow_root
 
     def login(self):
-        print("\n\n login()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
         print(datetime.now())
         self.driver.get(self.room_link)
         print(datetime.now())
@@ -164,11 +162,11 @@ class WebDriver:
                 ]).click()
             except:
                 pass
-            print("\n\n clicked androidDismissButton")
+            print(f"\n\n clicked androidDismissButton")
 
         sleep(10)
         print(datetime.now())
-        print("\n\n am here")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().am here")
         self.expand_all_v2([
             "route-layout:sidebar-layout",
             "palringo-sidebar:palringo-sidebar-profile",
@@ -211,7 +209,7 @@ class WebDriver:
     
     
     def send_msg(self, msg):
-        print("\n\n send_msg()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().send_msg()")
         self.driver.implicitly_wait(20)
 
         # Enter Msg
@@ -238,18 +236,17 @@ class WebDriver:
         ).getOne("send-button").execute().click()
 
     def get_latest_bot_msgs(self,private=False):
-        print("\n\n get_latest_bot_msgs()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_bot_msgs()")
         return [x for x in self.get_latest_msgs(private=private).execute() if x.get_attribute("is-bot")=='']
         
 
     def get_latest_user_msgs(self):
-        print("\n\n get_latest_user_msgs()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_user_msgs()")
         elements = self.get_latest_msgs().execute()
-        print("\n\n here am i")
         return [x for x in elements if x.get_attribute("is-bot")!='']
 
     def get_latest_msgs(self,private=False):
-        print("\n\n get_latest_msgs()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_msgs()")
         self.driver.implicitly_wait(20)
         d = "user" if private else "group"
         return self.qs.getOneShadowRoot(
@@ -262,7 +259,7 @@ class WebDriver:
         ).getOne("#chat-container").getList("palringo-chat-message")
 
     def get_last_msg(self,index=-1):
-        print("\n\n get_last_msg()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_msg()")
         """
         function get the latestest message in test form
         """
@@ -273,14 +270,14 @@ class WebDriver:
             return ''
 
     def is_bot(self):
-        print("\n\n is_bot()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_bot()")
         """return true if last message is from a bot"""
         return self.get_last_element().get_attribute("is-bot")==''
 
 
 
     def get_last_bot_msg(self,index=-1,private=False):
-        print("\n\n get_last_bot_msg()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_bot_msg()")
         """
         function get the latestest message in test form
         """
@@ -293,7 +290,7 @@ class WebDriver:
 
 
     def get_last_user_msg(self,index=-1):
-        print("\n\n get_last_user_msg()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_user_msg()")
         """
         function get the latestest message in test form
         """
@@ -304,7 +301,7 @@ class WebDriver:
             element = elements[index]
             return self.qs.action(".shadowRoot").getOne("palringo-chat-message-text").execute(element).text
         except Exception as e:
-            print("\n\n erro while getting user message ",e)
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() error while getting user message ",e)
             return ''
         
 
@@ -312,7 +309,7 @@ class WebDriver:
 
 
     def get_latest_pm(self):
-        print("\n\n get_latest_pm()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_pm()")
         self.driver.implicitly_wait (20)
         return self.qs.getOneShadowRoot(
             'route-layout',
@@ -324,7 +321,7 @@ class WebDriver:
         ).getOne('#chat-container').getList("palringo-chat-message")
 
     def change_inbox(self):
-        print("\n\n change_inbox()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().change_inbox()")
         self.qs.getOneShadowRoot(
             "route-layout",
             "sidebar-layout"
@@ -334,24 +331,24 @@ class WebDriver:
         ).getOne("paper-tab[title='Chats']").action(".click()").execute()
 
     def close(self):
-        print("\n\n close()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().close()")
         self.driver.quit()
 
 
     def is_stop(self):
-        print("\n\n is_stop()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop()")
         return bool(re.findall(r'!stop',self.get_last_user_msg() or '',re.I))
 
     
     def transfrom(self,selector:str):
-        print("\n\n transfrom()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().transfrom()")
         if ":" in selector:
             return "".join([f".querySelector('{x}').shadowRoot" for x in selector.split(":") if x])
         else:
             return f".querySelector('{selector}')"
     
     def expand_all_v2(self,data:list,element:Optional[WebElement]=None):
-        print("\n\n expand_all_v2()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().expand_all_v2()")
         sleep(2)
         query:List[str] = map(self.transfrom,data)
         query_str = "".join(query)
@@ -361,7 +358,7 @@ class WebDriver:
 
 
     def exist(self,selectors):
-        print("\n\n exist()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().exist()")
         try:
             return bool(self.expand_all_v2(selectors))
         except:
@@ -369,7 +366,7 @@ class WebDriver:
                 
 
     def expand_all(self,data:list):
-        print("\n\n expand_all()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().expand_all()")
         sleep(2)
         self.driver.implicitly_wait(10)
         result = self.driver.find_element_by_css_selector(data[0])
@@ -382,12 +379,12 @@ class WebDriver:
     
 
     def element_exists(self,selectors=list()):
-        print("\n\n element_exists()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().element_exists()")
         return self.exist(selectors)
 
 
     def get_last_element(self,index=-1):
-        print("\n\n get_last_element()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_element()")
         """
         function get the latestest message in test form
         """

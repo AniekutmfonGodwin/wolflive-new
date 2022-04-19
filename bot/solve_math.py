@@ -20,7 +20,7 @@ class SolveMathsBot(
     game_start:bool = field(default_factory=bool,init=False)
     stop:bool = field(default_factory=bool,init=False)
 
-    def __post_init__(self,browser):
+    def __post_init__(self):
         self.login()
         self.setup_status()
         if self.autoplay:
@@ -117,14 +117,15 @@ class SolveMathsBot(
 
     def wait_and_get_bot_message(self):
         for _ in range(40):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if re.search('bot\n',text,re.IGNORECASE):
                 return text
+            
             
 
     def wait_and_get_user_message(self):
         for _ in range(40):
-            text = self.get_last_msg()
+            text = self.get_last_element().text
             if not re.search('bot\n',text,re.IGNORECASE):
                 return text
 
@@ -149,12 +150,12 @@ class SolveMathsBot(
 
 
 
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    username_2 = 'Telek@gmail.com'
-    password_2 = '123456'
-    room_link = 'https://wolf.live/g/18510545'
+    # username_2 = 'Telek@gmail.com'
+    # password_2 = '123456'
+    room_link = 'https://wolf.live/g/18900545'
     
 
     browser:SolveMathsBot = None
@@ -164,12 +165,16 @@ if __name__ == '__main__':
             browser = SolveMathsBot(username_1, password_1,room_link)
             break
         except KeyboardInterrupt:
-            break
-        except:
-            print("no internet conenction,re-trying...")
-            continue
+            raise KeyboardInterrupt()
+        # except Exception as e:
+        #     print("no internet conenction,re-trying...",e)
+        #     continue
     
     
     if browser:browser.close()
+
+
+if __name__ == '__main__':
+    main()
     
     

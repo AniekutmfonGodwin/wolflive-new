@@ -21,7 +21,6 @@ from game.models import (
 
 
 
-
 if __name__ == '__main__':
     quiz_data = {'question':'how are you','answer':'you',"category":'Music'}
     

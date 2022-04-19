@@ -61,11 +61,9 @@ class WebDriver:
         self.driver = webdriver.Chrome(options=chrome_options, executable_path=chromedriver_path)
         self.driver.implicitly_wait(20)
         self.driver.set_page_load_timeout(80)
-        self.is_login = False
         sleep(2)
         try:
             self.login()
-            self.is_login = True
         except Exception as e:
             self.driver.quit()
             raise Exception("couldn't login",e)
@@ -280,9 +278,7 @@ class WebDriver:
     
     # browser.driver.quit()
 
-# %%
-
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
 
@@ -291,5 +287,10 @@ if __name__ == '__main__':
     browser = None
     is_login = False
     browser = WebDriver(username_1, password_1,room_link)
+
+# %%
+
+if __name__ == '__main__':
+    main()
     
     

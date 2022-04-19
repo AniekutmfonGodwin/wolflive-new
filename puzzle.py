@@ -2,6 +2,7 @@
 from dataclasses import dataclass,field
 from email.policy import default
 from typing import List, Optional
+from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 from bs4 import BeautifulSoup
 from main import *
@@ -66,14 +67,17 @@ class Puzzle(
 
 
 
-        
+    def restart(self):
+        self.login()
+        self.run()
     
 
  
 
 
     def play(self):
-        if self.is_debug:print("\n\n play()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().play()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().play()")
         self.remaining_puzzle = self.get_puzzle_number()
         if not self.remaining_puzzle:return
         start_position = self.remaining_puzzle[0]
@@ -94,7 +98,7 @@ class Puzzle(
 
     # task
     def start_game(self,difficulty='',*args, **kwargs):
-        if self.is_debug:print("\n\n start_game(difficulty={difficulty},{args},{kwargs})")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().start_game(difficulty={difficulty},{args},{kwargs})")
         self.stop_on_user = False
         self.stop_loop = False
         logger.info("start game")
@@ -103,7 +107,7 @@ class Puzzle(
 
 
     def end_game(self,*args, **kwargs):
-        if self.is_debug:print("\n\n end_game({args},{kwargs})")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().end_game({args},{kwargs})")
         self.stop_on_user = True
         self.stop_loop = True
         logger.info("ended game")
@@ -111,13 +115,13 @@ class Puzzle(
         self.send_msg("!puzzle end")
 
     def get_frame_element(self,*args, **kwargs):
-        print("\n\n get_frame_element({args},{kwargs})")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_frame_element({args},{kwargs})")
         element = self.get_last_puzzle_question()[-1]
         return self.qs.action(".shadowRoot").getOneShadowRoot("palringo-chat-message-pack").getOne("#content").execute(element)
 
 
     def get_puzzle_number(self,element=None,*args, **kwargs):
-        print("\n\n get_puzzle_number(element={element},{args},{kwargs})")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_puzzle_number(element={element},{args},{kwargs})")
         logger.info("get puzzle number")
         print("get puzzle number")
         
@@ -146,17 +150,21 @@ class Puzzle(
     
 
     def move_tiles(self,moves:str='',*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().move_titles()")
         logger.info("move tile:moves -> "+moves)
         print("move tile:moves -> "+moves)
         self.send_msg(str(moves))
-
+        self.tracker.wait(3)
+        
 
 
     def get_last_puzzle_question(self,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_puzzle_question()")
         return [x for x in self.get_latest_msgs().execute() if x.get_attribute("is-bot")=='' and x.get_attribute("render-tag") in 'palringo-chat-message-pack']
         
 
     def reset_moves(self,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().reset_moves()")
         logger.info("reset moves")
         print("reset moves")
         config["Puzzle"]["moves"] = ""
@@ -166,6 +174,7 @@ class Puzzle(
 
     
     def is_image_msg(self,index=-1,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_image_msg()")
         element_selenium = self.get_latest_bot_msgs()
         if not element_selenium:return False
         element = element_selenium[index]
@@ -176,6 +185,7 @@ class Puzzle(
     # event
 
     def on_question(self,func=None,negate=False,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_question()")
         condition = 'The group has 60 minutes to solve this puzzle!' in self.get_last_bot_msg(index=-2)
         
         if self.is_image_msg() and condition:
@@ -189,8 +199,8 @@ class Puzzle(
     
 
     def on_already_a_game(self,func:Optional[callable]=None,negate=False,*args, **kwargs):
-        if self.is_debug:print(f"\n\n on_already_a_game({func},{negate},{args},{kwargs})")
-        print(" am here ")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_already_a_game({func},{negate},{args},{kwargs})")
+        
         message = self.get_last_bot_msg(index=-2)
         condition = "There's already an active puzzle in this group" in message
         
@@ -204,18 +214,26 @@ class Puzzle(
         
 
     def on_fail(self,func=None,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_fail()")
         if not self.is_image_msg() and 'The group failed to solve the puzzle within an hour' in self.get_last_bot_msg():
             print("on_fail")
             func(*args,**kwargs) if func else print("on_fail")
 
     def on_warning(self,func=None,*args, **kwargs):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_warning()")
         if not self.is_image_msg() and 'The group has 10 minutes remaining to solve the puzzle' in self.get_last_bot_msg():
             func(*args,**kwargs) if func else print("on_warning")
 
 
 
     def on_success(self,func=None,*args, **kwargs):
-        if not self.is_image_msg(index=-3) and 'The puzzle was completed in' in self.get_last_bot_msg(index=-3):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_success()")
+        # if not self.is_image_msg(index=-3) and 'The puzzle was completed in' in self.get_last_bot_msg(index=-3):
+        if any([
+            'The puzzle was completed in' in self.get_last_bot_msg(index=-3),
+            'The puzzle was completed in' in self.get_last_bot_msg(index=-2),
+            'The puzzle was completed in' in self.get_last_bot_msg(index=-1),
+        ]):
             func(*args,**kwargs) if func else print("on_success")
 
         # save image links and moves to database
@@ -223,7 +241,7 @@ class Puzzle(
     
 
     def run(self):
-
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run()")
         self.on_question(func=self.start_game,negate =True,difficulty=config["Puzzle"]["difficulty"])
         logger.info("game start")
         print("game start")
@@ -234,6 +252,7 @@ class Puzzle(
             self.tracker.wait(seconds=1)
 
         def from_db(*args, **kwargs):
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().from_db()")
             self.stop_play_loop = False
             def stop_loop(*args, **kwargs):
                 self.stop_play_loop = True
@@ -243,6 +262,7 @@ class Puzzle(
          
 
         def stop():
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().stop()")
             self.reset_moves()
             self.stop_loop = True
             self.stop_on_user = True
@@ -254,14 +274,12 @@ class Puzzle(
             self.on_already_a_game(func=from_db)
             self.on_question(func=from_db)
             self.on_fail(func=stop)
+            self.on_success(func=self.start_game)
 
         logger.info("main loop stop")
         print("main loop stop")
 
-
-# %%
-if __name__ == '__main__':
-    
+def main():
     room_link = 'https://wolf.live/g/18900545'
     private_url ='https://wolf.live/u/80277459'
     username = 'Komp@gmail.com'
@@ -271,11 +289,18 @@ if __name__ == '__main__':
         try:
             puzzle.run()
         except KeyboardInterrupt:
-            break
+            raise KeyboardInterrupt("stop bot keyboard command")
+        except StopBotError:
+            raise StopBotError("stop bot bot command")
         except StaleElementReferenceException:
             print("element not attach to the dom,refreshing")
             if puzzle.driver:puzzle.driver.refresh()
         puzzle.tracker.wait(seconds=3)
+
+
+# %%
+if __name__ == '__main__':
+    main()
     
 
     

@@ -34,7 +34,7 @@ class QueryBuilder:
             if not element:
                 raise Exception("queryBuilder could not retrieve base element")
             query_str = "".join(self.__queries)
-            if self.is_debug:print("\n\n query => document.querySelector('body')"+query_str)
+            if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}() query => document.querySelector('body')"+query_str)
             result = self.__driver.execute_script("return arguments[0]"+query_str,element)
         except JavascriptException as e:
             self.reset()
@@ -50,7 +50,7 @@ class QueryBuilder:
             if not element:
                 raise Exception("queryBuilder could not retrieve base element")
             query_str = "".join(self.__queries)
-            if self.is_debug:print("\n\n query => document.querySelector('body')"+query_str)
+            if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}() query => document.querySelector('body')"+query_str)
             return bool(self.__driver.execute_script("return arguments[0]"+query_str,element))
         except:
             return False
@@ -79,7 +79,7 @@ class QueryBuilder:
 
 
     def exists(self,qs=None,element:Optional[WebElement]=None,*args, **kwargs):
-        print("\n\n exists()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().exists()")
         try:
             qs:QueryBuilder = qs or self
             return bool(qs.execute(element=element,*args, **kwargs))

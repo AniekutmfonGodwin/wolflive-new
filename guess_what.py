@@ -99,7 +99,7 @@ class Guesswhat(
     # on_game_over
 
     def on_question(self):
-        print("\n\n on_question()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_question()")
         ele1 = self.get_latest_bot_msgs()[-1]
         ele2 = self.get_latest_bot_msgs()[-2]
         if ele1.get_attribute("render-tag")=="palringo-chat-message-image" or ele2.get_attribute("render-tag")=="palringo-chat-message-image":
@@ -157,7 +157,7 @@ class Guesswhat(
 
 
     def on_game_over(self):
-        print("\n\n on_game_over()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_game_over()")
         if not self.get_latest_bot_msgs()[-1].get_attribute("render-tag")=="palringo-chat-message-image":
             text = self.get_last_bot_msg()
             if re.findall(r"Game over",text,re.I) and all([self.image_code,self.image_url,self.category,self.guess]):
@@ -207,7 +207,7 @@ class Guesswhat(
    
         
     def goto_search(self):
-        print("\n\n goto_search()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().goto_search()")
         if len(self.driver.window_handles) < 2:
             self.driver.execute_script(f"window.open('{self.search_url}');")
         self.driver.switch_to.window(self.driver.window_handles[1])            

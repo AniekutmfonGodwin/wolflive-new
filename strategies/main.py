@@ -5,7 +5,8 @@ import re
 from typing import List, Optional
 from query_builder import QueryBuilder
 from selenium import webdriver
-from strategies.interfaces import BaseWolfliveStrategyInterface, CheckStrategyInterface, GetMessageStrategyInterface, SendMessageStrategyInterface
+from strategies.exceptions import StopBot, StopBotError
+from strategies.interfaces import BaseWolfliveStrategyInterface, CheckStrategyInterface, GetMessageStrategyInterface, LoginStrategyInterface, SendMessageStrategyInterface
 from utils.helpers import Tracker
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webelement import WebElement
@@ -38,12 +39,12 @@ class BaseWolfliveStrategy(CheckStrategyInterface):
     
 
     def goto_group(self):
-        if self.is_debug:print("\n\n goto_group()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().goto_group()")
         self.driver.switch_to.window(self.driver.window_handles[0])
         
 
     def goto_private(self):
-        if self.is_debug:print("\n\n goto_private()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().goto_private()")
         private_url = getattr(self,"private_url",None)
         if private_url and len(self.driver.window_handles) <2:
             self.driver.execute_script(f"window.open('{private_url}');")
@@ -53,6 +54,8 @@ class BaseWolfliveStrategy(CheckStrategyInterface):
 
     def restart(self):
         ...
+
+    
 
     @property
     def tracker(self):
@@ -65,7 +68,7 @@ class BaseWolfliveStrategy(CheckStrategyInterface):
         return QueryBuilder(self.driver)
 
     def close(self):
-        print("\n\n close()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().close()")
         self.driver.quit()
 
 
@@ -78,7 +81,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         BaseWolfliveStrategyInterface (_type_): _description_
     """
     def get_last_msg(self,index=-1):
-        if self.is_debug:print(f"\n\n get_last_msg(index={index})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_msg(index={index})")
         """
         function get the latestest message in test form
         """
@@ -87,11 +90,11 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
             element = elements[index]
             return self.qs.action(".shadowRoot").getOne("palringo-chat-message-text").execute(element).text
         except:
-            print("\n\n could not retrieve last element")
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() could not retrieve last element")
             return ''
 
     def get_latest_msgs(self,private=False):
-        if self.is_debug:print(f"\n\n get_latest_msgs(private={private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_msgs(private={private})")
         self.goto_private() if private else self.goto_group()
         d = "user" if private else "group"
         return self.qs.getOneShadowRoot(
@@ -104,17 +107,17 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         ).getOne("#chat-container").getList("palringo-chat-message")
 
     def get_latest_user_msgs(self):
-        if self.is_debug:print("\n\n get_latest_user_msgs()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_user_msgs()")
         elements = self.get_latest_msgs().execute()
-        print("\n\n here am i")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}() here am i")
         return [x for x in elements if x.get_attribute("is-bot")!='']
 
     def get_latest_bot_msgs(self,private=False)-> List[WebElement]:
-        if self.is_debug:print(f"\n\n get_latest_bot_msgs(private={private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_bot_msgs(private={private})")
         return [x for x in self.get_latest_msgs(private=private).execute() if x.get_attribute("is-bot")=='']
 
     def get_last_message_private(self):
-        if self.is_debug:print("\n\n get_last_message_private()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_message_private()")
         self.goto_private()
         self.driver.implicitly_wait(20)
         elements = self.get_lastest_messages_private().execute()
@@ -123,12 +126,12 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         return elements[-1].text
 
     def get_lastest_messages_private(self):
-        if self.is_debug:print("\n\n get_lastest_messages_private()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_lastest_messages_private()")
         self.goto_private()
         return self.get_latest_msgs(private=True)
 
     def get_latest_msgs(self, private: bool = False):
-        if self.is_debug:print(f"\n\n get_latest_msgs(private = {private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_msgs(private = {private})")
         self.goto_private() if private else self.goto_group()
         self.driver.implicitly_wait(20)
         d = "user" if private else "group"
@@ -147,7 +150,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
 
     def get_last_bot_msg(self,index=-1,private=False)->str:
-        if self.is_debug:print(f"\n\n get_last_bot_msg({index},{private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_bot_msg({index},{private})")
         """
         function get the latestest message in test form
         """
@@ -161,7 +164,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
 
     def get_last_user_msg(self,index=-1):
-        if self.is_debug:print(f"\n\n get_last_user_msg({index})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_user_msg({index})")
         """
         function get the latestest message in test form
         """
@@ -174,7 +177,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
                 .getOne("palringo-chat-message-text")\
                     .execute(element).text
         except Exception as e:
-            print("\n\n error while getting user message ",e)
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() error while getting user message ",e)
             return ''
         
 
@@ -182,7 +185,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
 
     def get_latest_pm(self):
-        if self.is_debug:print("\n\n get_latest_pm()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_pm()")
         self.driver.implicitly_wait (20)
         return self.qs.getOneShadowRoot(
             'route-layout',
@@ -194,7 +197,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         ).getOne('#chat-container').getList("palringo-chat-message")
 
     def get_last_element(self,index=-1):
-        if self.is_debug:print(f"\n\n get_last_element({index})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_last_element({index})")
         """
         function get the latestest message in test form
         """
@@ -207,7 +210,7 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
 
 
-class CheckStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterface):
+class CheckStrategy(BaseWolfliveStrategyInterface,LoginStrategyInterface,GetMessageStrategyInterface):
     """responsible for checking states
 
     Args:
@@ -215,17 +218,32 @@ class CheckStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterface):
         GetMessageStrategyInterface (_type_): _description_
     """
     def is_bot(self):
-        if self.is_debug:print("\n\n is_bot()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_bot()")
         """return true if last message is from a bot"""
         return self.get_last_element().get_attribute("is-bot")==''
 
     def is_stop(self):
-        if self.is_debug:print("\n\n is_stop()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop()")
         return bool(re.findall(r'!stop',self.get_last_user_msg() or '',re.I))
+
+    @property
+    def is_login(self):
+        try:
+            res = bool(self.qs.getOneShadowRoot("route-layout","sidebar-layout","palringo-sidebar","palringo-sidebar-profile","palringo-user-avatar").getOne("#avatar").execute().get_attribute("hidden") != "true")
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_login({res})")
+            return res
+        except StopBotError:
+            raise StopBotError()
+        except Exception as e:
+            print(e)
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_login(False)")
+            return False
+        
+            
 
 
     def message_box_exists(self,private:Optional[bool]=False):
-        if self.is_debug:print(f"\n\n message_box_exists({private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().message_box_exists({private})")
         self.goto_private() if private else self.goto_group()
         d = "user" if private else "group"
         return self.qs.getOneShadowRoot(
@@ -240,16 +258,16 @@ class CheckStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterface):
         ).getOne("textarea").exists()
 
     def message_box_exists_group(self):
-        if self.is_debug:print("\n\n message_box_exists_group()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().message_box_exists_group()")
         return self.message_box_exists(private=False)
 
     def message_box_exists_private(self):
-        print("\n\n message_box_exists_group()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().message_box_exists_group()")
         return self.message_box_exists(private=True)
 
 
     def is_stop(self):
-        if self.is_debug:print("\n\n is_stop()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop()")
         return bool(re.findall(r'!stop',self.get_last_user_msg() or '',re.I))
 
     @property
@@ -267,7 +285,7 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
     """
 
     def send_msg(self, msg:str,private:bool=False):
-        if self.is_debug:print(f"\n\n send_msg(private={private})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().send_msg(private={private})")
         self.goto_private() if private else self.goto_group()
         d = "user" if private else "group"
         # Enter Msg
@@ -286,19 +304,19 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
 
 
     def send_message_private(self, msg):
-        if self.is_debug:print(f"\n\n send_message_private({msg})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().send_message_private({msg})")
         self.send_msg(msg,private=True)
 
     def send_message_group(self, msg):
-        if self.is_debug:print(f"\n\n send_message_group({msg})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().send_message_group({msg})")
         self.send_msg(msg,private=False)
 
     def toggle_autoplay(self,cmd):
-        if self.is_debug:print(f"\n\n toggle_autoplay({cmd})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay({cmd})")
         self.send_msg(cmd)
 
     def check_autoplay(self,cmd,config_section:str):
-        if self.is_debug:print(f"\n\n check_autoplay({cmd},{config_section})")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay({cmd},{config_section})")
         self.send_msg(cmd)
         for _ in range(20):
             if self.is_bot():
@@ -309,7 +327,7 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
             self.toggle_autoplay(cmd)
 
     def change_inbox(self):
-        if self.is_debug:print("\n\n change_inbox()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().change_inbox()")
         self.qs.getOneShadowRoot(
             "route-layout",
             "sidebar-layout"
@@ -329,18 +347,19 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         
 
     def set_driver(self):
-        if self.is_debug:print("\n\n set_driver()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().set_driver()")
         if getattr(self,"driver",None):
             self.driver.quit()
         self.driver = webdriver.Chrome(options=chrome_options, executable_path=chromedriver_path)
         self.driver.set_page_load_timeout(80)
-        self.is_login = False
+        
 
     def update_driver(self):
-        if self.is_debug:print("\n\n update_driver()")
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().update_driver()")
         self.login()
 
     def login(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
         assert self.username and self.password,"username and password is required to login bot"
         self.set_driver()
         self.driver.implicitly_wait(10)
@@ -348,22 +367,27 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         
 
         try:
-            for retry in range(7):
+            for retry in range(10):
                 try:
                     self.__login()
-                    break
+                    self.tracker.wait(5)
+                    if self.is_login:break
+                except ConnectionRefusedError:
+                    print("check you internet connection")
+                    if retry > 5:
+                        raise Exception("maximum retry has been reached")
                 except TimeoutException:
                     if retry > 5:
                         raise Exception("maximum retry has been reached")
-                    self.driver.refresh()
-            self.is_login = True
+                self.tracker.wait(10)
+                self.driver.refresh()
         except Exception as e:
-            print("\n\n error ",e)
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() error ",e)
             self.driver.quit()
-            raise Exception("couldn't login")
+            raise StopBotError("couldn't login")
 
     def __login(self):
-        if self.is_debug:print("\n\n login()")
+        if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
         self.driver.get(self.room_link)
         self.tracker.wait(seconds=10)
         
@@ -376,7 +400,7 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
                 ).execute().click()
             except:
                 pass
-            print("\n\n clicked androidDismissButton")
+            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() clicked androidDismissButton")
 
         self.tracker.wait(seconds=10)
         self.qs.getOneShadowRoot(
@@ -400,14 +424,15 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         self.qs.getOneShadowRoot("login-dialog")\
             .getOne("#sign-in").execute().click()
         self.tracker.wait(seconds=6)
-        self.tracker.wait_til_condition(
-            function=self.driver.refresh,
-            conditions=[
-                self.message_box_exists
-            ],
-            delay_in_seconds=4,
-            max_loop=10
-        )
+        if self.is_login:
+            self.tracker.wait_til_condition(
+                function=self.driver.refresh,
+                conditions=[
+                    self.message_box_exists
+                ],
+                delay_in_seconds=4,
+                max_loop=10
+            )
         
 
 
@@ -417,3 +442,18 @@ class TestClass(BaseWolfliveStrategy,LoginStrategy,GetMessageStrategy,SendMessag
     password:str
     private_url:Optional[str] ='https://wolf.live/u/80277459'
     room_link:Optional[str] = 'https://wolf.live/g/18900545'
+
+    def restart(self):
+        print("restart called")
+
+def main():
+    password = "123456"
+    username = "Komp@gmail.com"
+    return TestClass(username,password)
+    
+    # return t.tracker
+
+
+if __name__ == '__main__':
+    main()
+    

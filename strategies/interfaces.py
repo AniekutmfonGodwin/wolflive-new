@@ -129,6 +129,11 @@ class CheckStrategyInterface(ABC):
     def is_debug(self)->bool:
         ...
 
+    @property
+    @abstractmethod
+    def is_login(self)->bool:
+        ...
+
 
 class LoginStrategyInterface(ABC):
     username:str

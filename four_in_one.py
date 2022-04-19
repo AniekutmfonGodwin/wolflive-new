@@ -85,7 +85,11 @@ class HunterHeroHeistFishing(
 
     
 
-    
+def main():
+    username_1 = "Komp@gmail.com"
+    password_1 = "123456"
+    room_link = 'https://wolf.live/g/18900545'
+    HunterHeroHeistFishing(username_1,password_1,room_link)
     
 
 
@@ -94,10 +98,7 @@ class HunterHeroHeistFishing(
     
 # %%
 if __name__ == "__main__":
-    username_1 = "Komp@gmail.com"
-    password_1 = "123456"
-    room_link = 'https://wolf.live/g/18900545'
-    HunterHeroHeistFishing(username_1,password_1,room_link)
+    main()
     
 
     

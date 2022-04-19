@@ -79,13 +79,12 @@ class SolveTaboo:
 
 
 
-        
-if __name__ == '__main__':
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     username_2 = 'Telek@gmail.com'
     password_2 = '123456'
-    room_link = 'https://wolf.live/g/18512393'
+    room_link = 'https://wolf.live/g/18900545'
     private_url = 'https://wolf.live/u/24957563'
     
 
@@ -111,3 +110,7 @@ if __name__ == '__main__':
     if is_login:SolveTaboo(browser,browser2)
     if browser:browser.driver.quit()
     if browser2:browser2.driver.quit()
+
+        
+if __name__ == '__main__':
+    main()
