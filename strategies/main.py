@@ -229,7 +229,7 @@ class CheckStrategy(BaseWolfliveStrategyInterface,LoginStrategyInterface,GetMess
     @property
     def is_login(self):
         try:
-            res = bool(self.qs.getOneShadowRoot("route-layout","sidebar-layout","palringo-sidebar","palringo-sidebar-profile","palringo-user-avatar").getOne("#avatar").execute().get_attribute("hidden") != "true")
+            res = bool(self.qs.getOneShadowRoot("route-layout","sidebar-layout","palringo-sidebar","palringo-sidebar-profile","palringo-user-avatar").getOne("#avatar").execute().get_attribute("src"))
             print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_login({res})")
             return res
         except StopBotError:
@@ -371,6 +371,8 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
                 try:
                     self.__login()
                     self.tracker.wait(5)
+                    self.driver.refresh()
+                    self.tracker.wait(5)
                     if self.is_login:break
                 except ConnectionRefusedError:
                     print("check you internet connection")
@@ -382,15 +384,14 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
                 self.tracker.wait(10)
                 self.driver.refresh()
         except Exception as e:
-            print(f"\n\n [{self.__class__}]{self.__class__.__name__}() error ",e)
+            print(f"\n\n error \n\n[{self.__class__}]{self.__class__.__name__}().login({e})")
             self.driver.quit()
-            raise StopBotError("couldn't login")
+            raise StopBotError(f"couldn't login {e}")
 
     def __login(self):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
         self.driver.get(self.room_link)
         self.tracker.wait(seconds=10)
-        
         if self.qs.getOneShadowRoot(
             "palringo-install-android",
         ).getOne("#androidDismissButton").exists():
@@ -410,9 +411,7 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
             "palringo-sidebar-profile"
         ).getOne("#status").execute().click()
         self.qs.getOneShadowRoot("login-dialog").getOne("#palringo-login").execute().click()
-        
         self.tracker.wait(seconds=6)
-        
         self.qs.getOneShadowRoot("login-dialog")\
             .getOne("#email")\
         .execute().send_keys(self.username)
@@ -423,7 +422,9 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         self.tracker.wait(seconds=8)
         self.qs.getOneShadowRoot("login-dialog")\
             .getOne("#sign-in").execute().click()
-        self.tracker.wait(seconds=6)
+        self.tracker.wait(seconds=5)
+        self.driver.refresh()
+        self.tracker.wait(seconds=5)
         if self.is_login:
             self.tracker.wait_til_condition(
                 function=self.driver.refresh,
@@ -433,8 +434,6 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
                 delay_in_seconds=4,
                 max_loop=10
             )
-        
-
 
 @dataclass
 class TestClass(BaseWolfliveStrategy,LoginStrategy,GetMessageStrategy,SendMessageStrategy,CheckStrategy):
