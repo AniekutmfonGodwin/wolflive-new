@@ -266,6 +266,7 @@ class Hangman(
             if letter:
                 # print("letter found from choice")
                 self.send_msg(choice(letter))
+                self.tracker.wait(3)
             else:
                 # print("no choice")
                 self.reset()

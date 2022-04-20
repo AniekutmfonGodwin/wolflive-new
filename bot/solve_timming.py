@@ -5,6 +5,16 @@ from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 
 
+commands = {
+    "is_question":r"لعبة فردية:",
+    "get_answer":r'\{(.+)\} بعد مرور (\d+) ثانية',
+    "is_gameover":r'انتهت اللعبة',
+    "is_done":r'الفائز',
+    "is_stop_game":r'قف!|!stop|!قف',
+    "start_game":'!وقت'
+}
+
+
 
 @dataclass
 class SolveTimming(
@@ -68,29 +78,29 @@ class SolveTimming(
 
     def is_question(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question()")
-        return bool(re.search(r"لعبة فردية:",self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(commands.get("is_question"),self.get_last_msg(),flags=re.IGNORECASE))
 
     def get_answer(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_answer()")
-        return re.findall(r'\{(.+)\} بعد مرور (\d+) ثانية',self.get_last_msg())[0]
+        return re.findall(commands.get("get_answer"),self.get_last_msg())[0]
         
 
     
 
     def is_gameover(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_gameover()")
-        return bool(re.search(r'انتهت اللعبة',self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(commands.get("is_gameover"),self.get_last_msg(),flags=re.IGNORECASE))
         
 
     def is_done(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done()")
-        return bool(re.search(r'الفائز',self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(commands.get("is_done"),self.get_last_msg(),flags=re.IGNORECASE))
         
 
     def is_stop_game(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
-            return bool(re.findall(r'قف!|!stop|!قف',self.get_last_msg(),flags=re.IGNORECASE))
+            return bool(re.findall(commands.get("is_stop_game"),self.get_last_msg(),flags=re.IGNORECASE))
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
@@ -105,7 +115,7 @@ class SolveTimming(
         for _ in range(10):
             try:
                 # self.browser.send_msg('!timing')
-                self.send_msg('!وقت')
+                self.send_msg(commands.get("start_game"))
                 break
             except KeyboardInterrupt:
                 raise KeyboardInterrupt

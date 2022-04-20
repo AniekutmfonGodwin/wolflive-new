@@ -241,5 +241,5 @@ def test():
     if browser:browser.close()
 
 
-# if __name__ == '__main__':
-#     main_()
+if __name__ == '__main__':
+    main_()

@@ -24,6 +24,7 @@ class HunterHeroHeistFishing(
         self.main()
 
     def run_hunter(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_hunter()")
         commands = json.loads(config['Hunter']['commands'])
         if commands:
             try:
@@ -39,6 +40,7 @@ class HunterHeroHeistFishing(
        
 
     def run_fishing(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_fishing()")
         commands = json.loads(config['Fishing']['commands'])
         if commands:
             try:
@@ -55,12 +57,14 @@ class HunterHeroHeistFishing(
             
 
     def run_hero(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_hero()")
         if config['HeroSquad']['count']:
             self.send_msg(f"!hero {config['HeroSquad']['count']}")
         else:
             self.send_msg("!hero")
 
     def run_heist(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_heist()")
         if config['Heist']['count']:
             self.send_msg(f"!heist {config['Heist']['count']}")
         else:
@@ -68,6 +72,7 @@ class HunterHeroHeistFishing(
 
 
     def main(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
         while not self.is_stop():
             if config['Fishing']['play'].lower() =='yes':
                 self.run_fishing() 
