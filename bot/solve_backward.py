@@ -24,10 +24,17 @@ class SolveBackward(
     def __post_init__(self):
         self.login()
         self.setup_status()
+        self.restart()
+        
+
+
+    def restart(self):
         if self.autoplay:
             while True and not self.stop:
                 try:
                     self.main()
+                except KeyboardInterrupt:
+                    raise KeyboardInterrupt()
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
@@ -42,7 +49,10 @@ class SolveBackward(
                 except Exception as e:
                     print("error from main method\n",e)
 
+
     def main(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.tracker.start()
         while True:
             try:
                 if self.autoplay:
@@ -55,34 +65,43 @@ class SolveBackward(
 
                 break
             except KeyboardInterrupt:
-                break
-            except:
+                raise KeyboardInterrupt()
+            except Exception as e:
+                print(e)
                 continue
+
         while True:
-            text = self.get_last_msg()
-            if self.is_question(text=text):
-                self.driver.implicitly_wait(20)
-                answer =  self.get_answer(text=text)
+            try:
+                text = self.get_last_msg()
+                if self.is_question(text=text):
+                    self.driver.implicitly_wait(20)
+                    answer =  self.get_answer(text=text)
 
-                if answer:
-                    self.send_msg(answer)
+                    if answer:
+                        self.send_msg(answer)
+                        self.tracker.reset()
 
-            if self.is_done(text):
-                print("we have a winner\n",text)
-                break
+                if self.is_done(text):
+                    print("we have a winner\n",text)
+                    break
 
-            if self.is_stop_game():
-                print("you stoped the game")
-                self.stop = True
-                break
+                if self.is_stop_game():
+                    print("you stoped the game")
+                    self.stop = True
+                    break
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt()
+            except Exception as e:
+                raise Exception()
+            
 
     
 
     def setup_status(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
         if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
             self.autoplay = True
         status:str = self.check_autoplay_status()
-        print("status",status)
         if status.upper()=='ON':
             if not self.autoplay:
                 self.toggle_autoplay()
@@ -93,9 +112,10 @@ class SolveBackward(
             self.toggle_autoplay()
     
     def check_autoplay_status(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
         self.send_msg('!backwards autoplay')
-        self.wait_and_get_user_message()
-        response = self.wait_and_get_bot_message()
+        self.wait_for_message_group('!backwards autoplay')
+        response = self.wait_for_bot_group()
         res =  re.findall(r"Autoplay is now turned (ON|OFF)",response,re.I)
         print("result from regex",res)
         if res:
@@ -104,39 +124,31 @@ class SolveBackward(
             raise Exception("site features has change update bot")
             # return False
         
-    def wait_and_get_bot_message(self):
-        end_time = time.time() + 40
-        while time.time() < end_time:
-            text = self.get_last_msg()
-            if re.search('bot\n',text,re.IGNORECASE):
-                return text
-
-    def wait_and_get_user_message(self):
-        end_time = time.time() + 40
-        while time.time() < end_time:
-            text = self.get_last_msg()
-            if not re.search('bot\n',text,re.IGNORECASE):
-                return text
-
     def toggle_autoplay(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
         self.send_msg('!backwards autoplay')
 
     def is_stop_game(self):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
             return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
-        except:
+        except Exception as e:
+            print(e)
             self.driver.refresh()
             return
 
     def is_question(self,text):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question(text={text})")
         return bool(re.search(r"-->",text,flags=re.IGNORECASE))
             
 
     def get_answer(self,text=''):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_answer(text={text})")
         return re.findall(r'--> ([a-zA-Z0-9]+) <--',text)[0][::-1]
 
 
     def is_done(self,text=''):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done(text={text})")
         return bool(re.search(r'Congrats',text,flags=re.IGNORECASE))
         
 

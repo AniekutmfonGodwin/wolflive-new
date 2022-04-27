@@ -32,8 +32,13 @@ class SolveCountdown(
     def __post_init__(self):
         self.login()
         self.setup_status()
+
+
+    def restart(self):
+        return self.run()
     
     def run(self):
+        self.tracker.start()
         if self.autoplay:
             while True and not self.stop:
                 try:
@@ -198,6 +203,7 @@ class SolveCountdown(
             if self.is_countdown_question(text=text):
                 question_data = self.get_countdown_question_data(text=text)
                 print("question data",question_data)
+                self.tracker.reset()
                 # {"target":target,"values":values}
                 if question_data:
                     expression = get_expression_from_data(question_data['target'],question_data['values'])

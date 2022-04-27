@@ -23,17 +23,23 @@ class WebDriver(
 
 class SolveTaboo:
 
-    def __init__(self,browser:WebDriver,browser2:WebDriver):
+    def __init__(self,browser:WebDriver,browser2:WebDriver,test=False):
         self.browser = browser
         self.browser2 = browser2
         self.browser.driver.switch_to.window(self.browser.driver.window_handles[0])
-        for _ in range(int(input("how many time should i play the game?\n   e.g 100\n===> "))):
+        self.test = test
+        self.browser.tracker.restart = self.restart
+        self.browser.tracker.start()
+        for _ in range(int(input("how many time should i play the game?\n   e.g 100\n===> ") or 100)):
             try:
-                self.main()
+                if not self.test:self.main()
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
             except Exception as e:
                 print("error occurred\n",e)
+
+    def restart(self):
+        self.main()
 
 
     def wait_for_bot_message_private(self):
@@ -45,14 +51,6 @@ class SolveTaboo:
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
 
-    def wait_for_bot_message_grp(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot_message_grp()")
-        while True:
-            try:
-                if self.browser.is_bot():
-                    return self.browser.get_last_msg()
-            except KeyboardInterrupt:
-                raise KeyboardInterrupt
 
 
     def is_bot_message_grp(self):
@@ -78,9 +76,11 @@ class SolveTaboo:
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.browser.tracker.start()
         while True:
             try:
                 self.browser.send_msg("!taboo")
+                self.browser.wait_for_bot_group()
                 break
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
@@ -90,12 +90,15 @@ class SolveTaboo:
                 print(f"\n\n error \n\n[{self.__class__}]{self.__class__.__name__}().main({e})")
                 continue
 
-        self.wait_for_bot_message_grp()
+        
         self.browser.goto_private()
         text = self.browser.get_last_message_private()
         answer = re.findall(r'guess: ([a-zA-Z0-9 ]+\n?)',text,flags=re.I)[0]
         self.browser2.send_msg(answer)
+        self.browser2.wait_for_bot_group()
         self.browser.goto_group()
+        self.browser.tracker.reset()
+
 
 
 
@@ -163,7 +166,7 @@ def test():
             continue
     
     browser.tracker.wait(2)
-    return SolveTaboo(browser,browser2)
+    return SolveTaboo(browser,browser2,test=True)
     # if is_login:
     #     if browser:browser.driver.quit()
     #     if browser2:browser2.driver.quit()

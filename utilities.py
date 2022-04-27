@@ -20,11 +20,11 @@ def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/20
     print("search called")
     # searching on google
     
-    sleep(1)
+    
     driver.find_element_by_css_selector("[aria-label='Search by image']").click()
     input_tag = driver.find_element_by_css_selector("[name='image_url']")
     input_tag.clear()
-    sleep(3)
+    
     input_tag.send_keys(url,Keys.RETURN)
 
     # searching on google end return page source code --> data
@@ -38,7 +38,8 @@ def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/20
         wiki_result = soup.select_one('.kno-ecr-pt span').getText()
         print("wiki result\n",[re.sub(r"\xa0",'',x) for x in wiki_result],'\n')
         return [re.sub(r"\xa0",'',x) for x in wiki_result]
-    except:
+    except Exception as e:
+        print(e)
         pass
 
     # get search result
@@ -46,7 +47,7 @@ def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/20
         result = re.findall(r'Possible related search:(.+)',str(soup.select_one('#topstuff').getText()),re.I)
         print("result",[re.sub(r"\xa0",'',x) for x in result])
         return [re.sub(r"\xa0",'',x) for x in result]
-    except:
+    except Exception as e:
         pass
 
 
@@ -82,12 +83,13 @@ def search_image_by_bing(driver,url:str="https://www.talkwalker.com/uploads/2017
     driver.find_element(By.ID, "sb_imgpst").send_keys(Keys.ENTER)
 
     driver.maximize_window()
-    [x.text.replace("\n",'') for x in driver.find_elements_by_css_selector(".pritext")]
+    # [x.text.replace("\n",'') for x in driver.find_elements_by_css_selector(".pritext")]
 
 
     try:
         return [x.text.replace("\n",'') for x in driver.find_elements_by_css_selector(".pritext")]
-    except:
+    except Exception as e:
+        print("error occur on search ",e)
         pass
     return ''
 

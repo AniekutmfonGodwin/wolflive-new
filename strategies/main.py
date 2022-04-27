@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from pathlib import Path
 import configparser
+from selenium.common.exceptions import JavascriptException
 
 config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
 config = configparser.ConfigParser()
@@ -109,7 +110,6 @@ class GetMessageStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
     def get_latest_user_msgs(self):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_latest_user_msgs()")
         elements = self.get_latest_msgs().execute()
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}() here am i")
         return [x for x in elements if x.get_attribute("is-bot")!='']
 
     def get_latest_bot_msgs(self,private=False)-> List[WebElement]:
@@ -286,21 +286,43 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
 
     def send_msg(self, msg:str,private:bool=False):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().send_msg(private={private})")
-        self.goto_private() if private else self.goto_group()
-        d = "user" if private else "group"
-        # Enter Msg
+        for _ in range(20):
+            try:
+                self.goto_private() if private else self.goto_group()
+                d = "user" if private else "group"
+                # Enter Msg
 
-        self.qs.getOneShadowRoot(
-            "route-layout",
-            "sidebar-layout"
-        ).getOne("paper-drawer-panel").getOneShadowRoot(
-            "app-routes",
-            f"{d}-chat-page",
-            "palringo-chat",
-            "palringo-chat-input",
-            "iron-autogrow-textarea",
-        ).getOne("textarea").execute().send_keys(msg.strip(),Keys.RETURN)
-        
+                self.qs.getOneShadowRoot(
+                    "route-layout",
+                    "sidebar-layout"
+                ).getOne("paper-drawer-panel").getOneShadowRoot(
+                    "app-routes",
+                    f"{d}-chat-page",
+                    "palringo-chat",
+                    "palringo-chat-input",
+                    "iron-autogrow-textarea",
+                ).getOne("textarea").execute().send_keys(msg.strip(),Keys.RETURN)
+                break
+            except JavascriptException:
+                self.driver.refresh()
+                self.tracker.wait(5)
+    
+    def wait_for_bot_group(self,*,count=500,delay_in_second=0.5):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
+        for _ in range(count):
+            if "bot" in self.get_last_element().text.lower():break
+            self.tracker.wait(delay_in_second)
+        return self.get_last_element().text
+
+    def wait_for_message_group(self,text,count=500,delay_in_second=0.5):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
+        for _ in range(count):
+            if text in self.get_last_msg():break
+            self.tracker.wait(delay_in_second)
+
+        return self.get_last_msg()
+            
+
 
 
     def send_message_private(self, msg):
@@ -314,14 +336,14 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
     def toggle_autoplay(self,cmd):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay({cmd})")
         self.send_msg(cmd)
+        self.wait_for_bot_group()
+        
 
     def check_autoplay(self,cmd,config_section:str):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay({cmd},{config_section})")
         self.send_msg(cmd)
-        for _ in range(20):
-            if self.is_bot():
-                break
-            self.tracker.wait(seconds=0.3)
+        self.wait_for_message_group(cmd)
+        self.wait_for_bot_group()
         text = self.get_last_bot_msg()
         if config_section and config[config_section.title()]['autoplay'].upper() not in text:
             self.toggle_autoplay(cmd)
@@ -360,6 +382,11 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
     def login(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
+        try:
+            self.driver.quit()
+        except Exception as e:
+            pass
+
         assert self.username and self.password,"username and password is required to login bot"
         self.set_driver()
         self.driver.implicitly_wait(10)
@@ -370,8 +397,6 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
             for retry in range(10):
                 try:
                     self.__login()
-                    self.tracker.wait(5)
-                    self.driver.refresh()
                     self.tracker.wait(5)
                     if self.is_login:break
                 except ConnectionRefusedError:
@@ -423,17 +448,17 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
         self.qs.getOneShadowRoot("login-dialog")\
             .getOne("#sign-in").execute().click()
         self.tracker.wait(seconds=5)
-        self.driver.refresh()
-        self.tracker.wait(seconds=5)
-        if self.is_login:
-            self.tracker.wait_til_condition(
-                function=self.driver.refresh,
-                conditions=[
-                    self.message_box_exists
-                ],
-                delay_in_seconds=4,
-                max_loop=10
-            )
+        # self.driver.refresh()
+        # self.tracker.wait(seconds=5)
+        # if self.is_login:
+        #     self.tracker.wait_til_condition(
+        #         function=self.driver.refresh,
+        #         conditions=[
+        #             self.message_box_exists
+        #         ],
+        #         delay_in_seconds=4,
+        #         max_loop=10
+        #     )
 
 @dataclass
 class TestClass(BaseWolfliveStrategy,LoginStrategy,GetMessageStrategy,SendMessageStrategy,CheckStrategy):

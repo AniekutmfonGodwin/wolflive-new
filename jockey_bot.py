@@ -1,7 +1,7 @@
 # %%
 from dataclasses import dataclass
 from typing import Optional
-from strategies.exceptions import StopBot, StopBotError
+from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 import sys
 
@@ -28,7 +28,6 @@ class Jockey_Bot(
         self.main()
         
 
-
     def train_for_speed(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_speed()")
         self.send_message_private("!سباق تدريب كل 100")
@@ -36,12 +35,14 @@ class Jockey_Bot(
     # utility
     def train(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train()")
+        self.tracker.restart = self.train
         self.tracker.start(hours=2)
         self.tracker.wait(seconds=10)
         while not self.is_stop():
             try:
                 self.goto_private()
                 self.train_for_agile()
+                self.tracker.wait(seconds=60)
                 self.train_for_speed()
                 self.tracker.wait(seconds=60)
                 self.train_for_stamina()
@@ -55,11 +56,17 @@ class Jockey_Bot(
                 raise StopBotError("stop bot by bot interrupt")
             except Exception:
                 self.tracker.wait(self.tracker.get_time)
-                
+            self.tracker.wait(60)  
 
     def race(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().race()")
-        self.send_msg("!س جلد")
+        self.tracker.restart = self.race
+        self.tracker.start(hours=2)
+        self.goto_group()
+        while not self.is_stop():
+            self.send_msg("!س جلد")
+            self.tracker.wait(60)
+            self.tracker.reset()
             
 
 
@@ -87,6 +94,7 @@ def main():
         j.race()
         j.tracker.wait(seconds=10)
         print("\n\n  racing completed")
+        
     j.close() 
     
 # %%

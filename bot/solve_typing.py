@@ -45,6 +45,9 @@ class SolveTyping(
                 except Exception as e:
                     print("error from main method\n",e)
 
+    def restart(self):
+        return self.main()
+
     def setup_status(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
         if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
@@ -64,8 +67,8 @@ class SolveTyping(
     def check_autoplay_status(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
         self.send_msg('!typing autoplay')
-        self.wait_and_get_user_message()
-        response = self.wait_and_get_bot_message()
+        self.wait_for_message_group('!typing autoplay')
+        response = self.wait_for_bot_group()
         res =  re.findall(r'Autoplay .* (ON|OFF)',response,re.I)
         if res:
             return res[0]
@@ -76,11 +79,13 @@ class SolveTyping(
     def toggle_autoplay(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
         self.send_msg('!typing autoplay')
-        self.wait_and_get_user_message()
+        self.wait_for_message_group('!typing autoplay')
+
 
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.tracker.start()
         for _ in range(40):
             try:
                 if self.autoplay:
@@ -100,8 +105,9 @@ class SolveTyping(
 
         self.game_start =True
         for _ in range(50):
-            text = self.wait_and_get_bot_message()
+            text = self.wait_for_bot_group()
             if self.is_question(text):
+                self.tracker.reset()
                 answer =  self.get_answer(text=text)
 
                 if answer:
@@ -112,21 +118,8 @@ class SolveTyping(
                 print("we have a winner\n",text)
                 break
 
-    def wait_and_get_bot_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
-        for _ in range(40):
-            text = self.get_last_element().text
-            if re.search('bot\n',text,re.IGNORECASE):
-                return text
-            self.tracker.wait(1)
 
-    def wait_and_get_user_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_user_message()")
-        for _ in range(40):
-            text = self.get_last_element().text
-            if not re.search('bot\n',text,re.IGNORECASE):
-                return text
-            self.tracker.wait(1)
+    
 
     def is_question(self,text=''):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question()")
@@ -177,7 +170,6 @@ def test():
     for _ in range(5):
         try:
             return SolveTyping(username_1, password_1,room_link)
-            break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:

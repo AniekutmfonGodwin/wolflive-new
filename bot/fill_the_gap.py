@@ -54,9 +54,12 @@ class SolveFillTheGap(
     def __post_init__(self):
         self.login()
     
+    def restart(self):
+        return self.run()
 
     def run(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run()")
+        self.tracker.start()
         self.workspace = {
             "question":None,
             "anwser":None,
@@ -82,7 +85,7 @@ class SolveFillTheGap(
                 #     sleep(5)
                 #     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)):
                     if self.stop:break
                     self.main()
                 # try:
@@ -129,8 +132,8 @@ class SolveFillTheGap(
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
         """method check for the current autoplay status"""
         self.send_msg('!gap autoplay Music')
-        self.wait_and_get_user_message()
-        response = self.wait_and_get_bot_message()
+        self.wait_for_message_group('!gap autoplay Music')
+        response = self.wait_for_bot_group()
         res =  re.findall(r'Autoplay .* (On|Off)',response,re.I)
         if res:
             return res[0]
@@ -141,11 +144,14 @@ class SolveFillTheGap(
     def toggle_autoplay(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
         """method toggle autoplay"""
+        command = None
         if self.category:
-            self.send_msg(f'!gap autoplay {self.category}')
+            command = f'!gap autoplay {self.category}'
+            self.send_msg(command)
         else:
-            self.send_msg(f'!gap autoplay')
-        self.wait_and_get_user_message()
+            command = f'!gap autoplay'
+            self.send_msg(command)
+        self.wait_for_message_group(command)
 
 
     def main(self):
@@ -160,7 +166,7 @@ class SolveFillTheGap(
                 _answer = self.get_answer()
                 _question = self.workspace.get("question")
                 if  Gap.objects.filter(question=self.workspace.get("question"),category=self.workspace.get("category").lower()).exists():
-                    gp = Gap.objects.get(question =_question)
+                    gp:Gap = Gap.objects.get(question =_question)
                     gp.answer = _answer
                     gp.save()
                     print("\n\n answer saved")
@@ -176,6 +182,7 @@ class SolveFillTheGap(
             
 
             if self.is_question():
+                self.tracker.reset()
                 self.drop_workspace()
                 print("\n\n is question")
                 __question = self.get_question()
@@ -199,7 +206,7 @@ class SolveFillTheGap(
                                 category=self.workspace.get("category").lower()
                             )
 
-                    self.wait_and_get_bot_message()
+                    self.wait_for_bot_group()
 
             
 
@@ -212,7 +219,7 @@ class SolveFillTheGap(
                 break
 
             
-                
+               
 
 
 
@@ -276,13 +283,7 @@ class SolveFillTheGap(
 
     
 
-    def wait_and_get_user_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_user_message()")
-        for _ in range(10):
-            text = self.get_last_element().text
-            if not re.search('bot\n',text,re.IGNORECASE):
-                return text
-        self.tracker.wait(1)
+
 
     def is_stop_game(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
@@ -312,13 +313,7 @@ class SolveFillTheGap(
             self.driver.refresh()
             return
 
-    def wait_and_get_bot_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
-        for _ in range(10):
-            text = self.get_last_element().text
-            if re.search('bot\n',text,re.IGNORECASE):
-                return text
-            self.tracker.wait(1)
+    
 
     def is_question(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question()")

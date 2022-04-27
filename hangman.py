@@ -179,9 +179,7 @@ class Hangman(
 
     def wait_and_get_bot_message(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
-        for _ in range(20):
-            if self.is_bot():return ''
-            sleep(0.5)
+        self.wait_and_get_bot_message()
         self.start_game()
 
     

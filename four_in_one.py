@@ -22,6 +22,7 @@ class HunterHeroHeistFishing(
         self.login()
         self.tracker.wait(2)
         self.main()
+        self.tracker.start()
 
     def run_hunter(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_hunter()")
@@ -37,7 +38,8 @@ class HunterHeroHeistFishing(
         else:
             self.send_msg("!hunt")
 
-       
+    def restart(self):
+        return self.main()
 
     def run_fishing(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_fishing()")
@@ -73,6 +75,7 @@ class HunterHeroHeistFishing(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.tracker.start()
         while not self.is_stop():
             if config['Fishing']['play'].lower() =='yes':
                 self.run_fishing() 
@@ -86,6 +89,7 @@ class HunterHeroHeistFishing(
             if config['Hunter']['play'].lower() =='yes':
                 self.run_hunter()
             self.tracker.wait(60)
+            self.tracker.reset()
         
 
     

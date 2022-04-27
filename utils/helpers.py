@@ -18,6 +18,16 @@ class Tracker:
         return self.__time
 
     @property
+    def restart(self):
+        return self.__function
+
+    @restart.setter
+    def restart(self,value):
+        assert callable(value),"value must be callable"
+        self.__function = value
+        return self
+
+    @property
     def is_alive(self):
         return bool(self.__task and self.__task.is_alive())
     	
@@ -48,7 +58,7 @@ class Tracker:
         if self.__task and self.__task.is_alive():
             self.__task.cancel()
             sleep(0.2)
-            print("task canceled, is alive ",self.__task.is_alive())
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().stop(is_alice={self.__task and self.__task.is_alive()})")
         return self
 
     @property

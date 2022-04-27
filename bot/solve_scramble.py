@@ -59,7 +59,8 @@ class SolveScramble(
                 except Exception as e:
                     print("error from main method\n",e)
 
-
+    def restart(self):
+        return self.main()
 
     
     def setup_status(self):
@@ -128,12 +129,13 @@ class SolveScramble(
     
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.tracker.start()
         self.start_game()
         while True:
             
             text = self.get_last_msg()
             if self.is_question(text=text):
-                
+                self.tracker.reset()
                 
                 answers =  self.get_answer(self.get_question(text))
                 if answers:

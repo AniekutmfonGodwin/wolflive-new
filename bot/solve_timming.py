@@ -1,5 +1,6 @@
 from dataclasses import dataclass,field
 import re
+from typing import Any, Dict
 from main import *
 from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
@@ -11,7 +12,16 @@ commands = {
     "is_gameover":r'انتهت اللعبة',
     "is_done":r'الفائز',
     "is_stop_game":r'قف!|!stop|!قف',
-    "start_game":'!وقت'
+    "start_game":"!وقت"
+}
+
+commands_en = {
+    "is_question":r"seconds from now to win",
+    "get_answer":r'Type \{(.+)\} (\d+) seconds from now to win!',
+    "is_gameover":r"Time's Up",
+    "is_done":r'The winner',
+    "is_stop_game":r'قف!|!stop|!قف',
+    "start_game":"!timing"
 }
 
 
@@ -28,6 +38,7 @@ class SolveTimming(
     password:str
     room_link:str
     stop:bool = field(default_factory=bool)
+    commands:Dict[str,Any] = field(default_factory=lambda: commands_en)
 
     def __post_init__(self):
         self.login()
@@ -38,16 +49,20 @@ class SolveTimming(
             except Exception as e:
                 print("error occurred\n",e)
 
+    def restart(self):
+        return self.main()
+
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
         if self.options == '1':self.start_game()
+        self.tracker.start()
         while True:
-            # text = self.wait_and_get_bot_message()
             if self.is_question():
                 answer =  self.get_answer()
                 print("\n\n answer\nإجابة",answer)
                 if answer:
-                    self.tracker.wait(float(answer[1])-1.4)
+                    self.tracker.wait(float(answer[1])-1.6)
+                    self.tracker.reset()
                     if self.is_stop():
                         self.stop = True
                         print("\n\n stopped game")
@@ -78,29 +93,29 @@ class SolveTimming(
 
     def is_question(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_question()")
-        return bool(re.search(commands.get("is_question"),self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(self.commands.get("is_question"),self.get_last_msg(),flags=re.IGNORECASE))
 
     def get_answer(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_answer()")
-        return re.findall(commands.get("get_answer"),self.get_last_msg())[0]
+        return re.findall(self.commands.get("get_answer"),self.get_last_msg())[0]
         
 
     
 
     def is_gameover(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_gameover()")
-        return bool(re.search(commands.get("is_gameover"),self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(self.commands.get("is_gameover"),self.get_last_msg(),flags=re.IGNORECASE))
         
 
     def is_done(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done()")
-        return bool(re.search(commands.get("is_done"),self.get_last_msg(),flags=re.IGNORECASE))
+        return bool(re.search(self.commands.get("is_done"),self.get_last_msg(),flags=re.IGNORECASE))
         
 
     def is_stop_game(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
-            return bool(re.findall(commands.get("is_stop_game"),self.get_last_msg(),flags=re.IGNORECASE))
+            return bool(re.findall(self.commands.get("is_stop_game"),self.get_last_msg(),flags=re.IGNORECASE))
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
@@ -115,7 +130,7 @@ class SolveTimming(
         for _ in range(10):
             try:
                 # self.browser.send_msg('!timing')
-                self.send_msg(commands.get("start_game"))
+                self.send_msg(self.commands.get("start_game"))
                 break
             except KeyboardInterrupt:
                 raise KeyboardInterrupt

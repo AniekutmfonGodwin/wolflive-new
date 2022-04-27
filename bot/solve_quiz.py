@@ -34,6 +34,8 @@ class SolveQuiz(
                 print("error occurred\n",e)
                 continue
 
+    def restart(self):
+        self.main()
 
     def wait_for_bot_message_private(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot_message_private()")
@@ -133,6 +135,7 @@ class SolveQuiz(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
+        self.tracker.start()
         for _ in range(100):
             self.goto_group()
             for _ in range(10):
@@ -158,7 +161,7 @@ class SolveQuiz(
                     # print("question",text_private)
                     # print(self.is_question(text_private))
                     if self.is_question(text_private):
-                        
+                        self.tracker.reset()
                         question = self.get_question_and_options(text_private)
                         
 

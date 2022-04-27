@@ -5,7 +5,6 @@ from typing import List, Optional
 from strategies.exceptions import StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 from main import *
-from time import sleep
 import configparser
 config = configparser.ConfigParser()
 from utilities import search_image_by_google,search_image_by_bing
@@ -65,9 +64,10 @@ class Guesswhat(
         res = super().login()
         self.driver.execute_script(f"window.open('{self.search_url}');")
         return res
+
+    def already_a_game(self):
+        return "There is already a game in progress" in self.get_last_bot_msg()
         
-
-
 
     # state
     # -category
@@ -85,9 +85,7 @@ class Guesswhat(
         else:
             command = f'!gw {category}'
             self.send_msg(command)
-        for _ in range(10):
-            if command.lower() in self.get_last_user_msg():break
-            self.tracker.wait(1)
+        self.wait_for_bot_group()
             
 
     def restart(self):
@@ -114,7 +112,7 @@ class Guesswhat(
         # if ele1.get_attribute("render-tag")=="palringo-chat-message-image" or ele2.get_attribute("render-tag")=="palringo-chat-message-image":
         if any([ele.get_attribute("render-tag")=="palringo-chat-message-image" for ele in self.get_latest_bot_msgs()[-2:]]):
             print("is question")
-            self.tracker.reset(100)
+            self.tracker.reset()
             self.on_answer()
             
             # category:List[str] = re.findall(r"Category: (\w+)",self.get_last_bot_msg(index=-2),re.I)
@@ -177,18 +175,19 @@ class Guesswhat(
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().on_game_over()")
         if self.get_latest_bot_msgs()[-1].get_attribute("render-tag")!="palringo-chat-message-image":
             text = self.get_last_bot_msg()
-            if re.findall(r"Game over",text,re.I) and all([self.image_code,self.image_url,self.category,self.guess]):
+            if re.findall(r"Game over",text,re.I):
                 print("\n\n is game over")
-                data = {
-                    "image_code":self.image_code,
-                    "image_url":self.image_url,
-                    "guess":self.guess,
-                    "category":self.category
-                }
+                if all([self.image_code,self.image_url,self.category,self.guess]):
+                    data = {
+                        "image_code":self.image_code,
+                        "image_url":self.image_url,
+                        "guess":self.guess,
+                        "category":self.category
+                    }
 
-                print("data",data)
-                if not GuessWhat.objects.filter(image_code=self.image_code).exists():
-                    GuessWhat.objects.create(**data)
+                    print("data",data)
+                    if not GuessWhat.objects.filter(image_code=self.image_code).exists():
+                        GuessWhat.objects.create(**data)
                 self.start()
 
 
@@ -254,7 +253,7 @@ def main():
         search = search_image_by_google
 
     gw = Guesswhat(username_1,password_1,search,room_link = room_link)
-
+    gw.tracker.start()
     categories = [
         'Celebrities',
         'Logos',

@@ -103,7 +103,7 @@ class Jockey_Bot_v2(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start(hours=10)
+        self.tracker.start(hours=2)
         self.tracker.wait(seconds=10)
         race = config["Jockey_v2"]["race"] or 1
         race = int(race)
