@@ -5,3 +5,5 @@ db.*
 **/__pycache__
 /.idea
 *.log
+
+env/
