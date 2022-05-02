@@ -1,2 +1,2 @@
 @echo off
-python four_in_one.py
+python %1 four_in_one.py %1

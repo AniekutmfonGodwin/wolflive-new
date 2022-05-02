@@ -21,8 +21,8 @@ from game.models import (
 
 
 
-if __name__ == '__main__':
-    quiz_data = {'question':'how are you','answer':'you',"category":'Music'}
+# if __name__ == '__main__':
+#     quiz_data = {'question':'how are you','answer':'you',"category":'Music'}
     
     # Quiz.objects.create(**quiz_data)
     # print(Quiz.objects.all())

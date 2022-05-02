@@ -1,2 +1,2 @@
 @echo off
-python decipher_bot.py
+python %1 decipher_bot.py %1

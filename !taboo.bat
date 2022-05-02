@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_taboo.py
+python %1 bot/solve_taboo.py %1

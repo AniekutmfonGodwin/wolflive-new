@@ -2,10 +2,11 @@
 from dataclasses import dataclass,field
 import re
 from typing import List, Optional
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
-from main import *
+from main import GuessWhat,WordList
 import configparser
+import sys
 config = configparser.ConfigParser()
 from utilities import search_image_by_google,search_image_by_bing
 
@@ -37,6 +38,8 @@ class Guesswhat(
     image_url:Optional[str] = field(default_factory=lambda:None)
     guess:Optional[str] = field(default_factory=lambda:None)
     category:Optional[str] = field(default_factory=lambda:None)
+    categories:List[str] = field(default_factory=list)
+    test:bool = field(default_factory=bool)
     # Available Categories:
     # - Logos (ID 1)
     # - Close Ups (ID 2)
@@ -55,9 +58,12 @@ class Guesswhat(
     def __post_init__(self):
         self.login()
         self.goto_group()
-        self.check_autoplay('!gw autoplay','GuessWhat')
+        self.autoplay = config["Guesswhat"]["autoplay"].lower().strip() in ["on","yes",1,"1"]
+        self.set_autoplay('!gw autoplay')
         self.tracker.wait(5)
-        self.tracker.start()
+        if not self.test:self.restart()
+        
+        
         
 
     def login(self):
@@ -90,7 +96,7 @@ class Guesswhat(
 
     def restart(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
-        self.start()
+        self.main()
 
     def reset(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().reset()")
@@ -112,7 +118,6 @@ class Guesswhat(
         # if ele1.get_attribute("render-tag")=="palringo-chat-message-image" or ele2.get_attribute("render-tag")=="palringo-chat-message-image":
         if any([ele.get_attribute("render-tag")=="palringo-chat-message-image" for ele in self.get_latest_bot_msgs()[-2:]]):
             print("is question")
-            self.tracker.reset()
             self.on_answer()
             
             # category:List[str] = re.findall(r"Category: (\w+)",self.get_last_bot_msg(index=-2),re.I)
@@ -162,12 +167,17 @@ class Guesswhat(
         print("\n\n guess ",self.guess)
         # searching image
         self.goto_group()
-        for msg in results:
+        if type(results) == str:
             self.tracker.wait(5)
-            self.send_msg(msg)
+            self.send_msg(results)
+        elif type(results) == list:
+            for msg in results:
+                self.tracker.wait(5)
+                self.send_msg(msg)
+            
         while not self.is_bot() and not self.is_stop():
             pass
-        self.tracker.wait(2)
+        self.wait_for_bot_group()
 
 
 
@@ -233,7 +243,21 @@ class Guesswhat(
         
 
 
+    def main(self):     
+                    
+        self.start(self.categories[0])
+        while True and not self.is_stop():
+            for category in self.categories[1:]:
+                self._category = category
+                for _ in range(60001):
+                    self.on_question()
+                    self.on_game_over()
+                    if self.is_stop():break
 
+                if self.is_stop():break
+
+
+        self.close()
     
     
 
@@ -251,9 +275,6 @@ def main():
         search = search_image_by_bing
     else:
         search = search_image_by_google
-
-    gw = Guesswhat(username_1,password_1,search,room_link = room_link)
-    gw.tracker.start()
     categories = [
         'Celebrities',
         'Logos',
@@ -267,72 +288,57 @@ def main():
         'Nature',
         '4in1',
         'Shuffled'
-    ]        
+    ] 
+
+    for _ in range(20):
+        try:
+            gw = Guesswhat(username_1,password_1,search,room_link = room_link,categories=categories)
+            gw.close()
+            break
+        except SignalRestartError:
+            continue
+    
+           
                 
     # %%
-    gw.start(categories[0])
-    while True and not gw.is_stop():
-        for category in categories[1:]:
-            gw._category = category
-            for _ in range(60001):
-                gw.on_question()
-                gw.on_game_over()
-                if gw.is_stop():break
-
-            if gw.is_stop():break
-
-
-    gw.close()
-
-
+    
 
 def test():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     search = None
-    if config["Guesswhat"]["search_engine"] == "bing":
+    if config["Guesswhat"]["search_engine"].lower().strip() == "bing":
         search = search_image_by_bing
     else:
         search = search_image_by_google
+    categories = [
+        'Celebrities',
+        'Logos',
+        'Music',
+        'Anime',
+        'Close Ups',
+        'Around The World',
+        'Mixed',
+        'Sports',
+        'Food',
+        'Nature',
+        '4in1',
+        'Shuffled'
+    ] 
 
-    return Guesswhat(username_1,password_1,search,room_link = room_link)
-
-    # categories = [
-    #     'Celebrities',
-    #     'Logos',
-    #     'Music',
-    #     'Anime',
-    #     'Close Ups',
-    #     'Around The World',
-    #     'Mixed',
-    #     'Sports',
-    #     'Food',
-    #     'Nature',
-    #     '4in1',
-    #     'Shuffled'
-    # ]        
-                
-    # %%
-    # gw.start(categories[0])
-    # while True and not gw.is_stop():
-    #     for category in categories[1:]:
-    #         gw._category = category
-    #         for _ in range(60001):
-    #             gw.on_question()
-    #             gw.on_game_over()
-    #             if gw.is_stop():break
-
-    #         if gw.is_stop():break
-
-
-    # gw.close()
+    for _ in range(20):
+        try:
+            return Guesswhat(username_1,password_1,search,room_link = room_link,categories=categories,test=True)
+            
+        except SignalRestartError:
+            continue
 
         
      
 
 # %%
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
 # %%
 # gw.get_last_user_msg(index=-2)

@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_countdown.py
+python %1 bot/solve_countdown.py %1

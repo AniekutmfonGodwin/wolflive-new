@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_quiz.py
+python %1 bot/solve_quiz.py %1

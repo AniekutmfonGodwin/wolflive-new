@@ -1,7 +1,7 @@
 # %%
 from dataclasses import dataclass,field
 from typing import List, Optional
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 import re
 from time import sleep
@@ -10,6 +10,8 @@ from random import choice
 from main import *
 from main import WordList,GuessWhat
 import configparser
+import sys
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 
@@ -33,6 +35,7 @@ class Hangman(
     current_pattern:str = field(default_factory=str)
     word_count:int = field(default_factory=int)
     live:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
     starter_letters:List[str] = field(default_factory=lambda:[
             'e','t','a','o','i','n','s','h',
             'r','d','l','u','c','m','f','w','y',
@@ -44,6 +47,7 @@ class Hangman(
     def __post_init__(self):
         self.login()
         self.get_wordlist_from_source()
+        if not self.test:self.main()
 
 
     """
@@ -94,6 +98,17 @@ class Hangman(
     # is a new game
     # is done
 
+    def add_word(self,word):
+        data:List[List[str,int]] = None
+        with open("word_list.json") as f:
+            data = json.load(f)
+            data.append([
+                word,
+                len(word)
+            ])
+        with open("word_list.json","w") as f:
+            json.dump(data,f)
+            
 
 
     def is_game_over(self):
@@ -105,9 +120,11 @@ class Hangman(
             answer = re.findall(r"The correct answer is: (.+)",text,re.I)
             if answer:
                 print(f"\n\n [{self.__class__}]{self.__class__.__name__}() answer game over",answer[0])
+                self.add_word(answer[0])
                 if not WordList.objects.filter(_word=answer[0]).exists(): WordList.objects.create(_word=answer[0])
             self.reset()
-            self.start_game()
+            self.send_msg("!h")
+            self.wait_for_bot_group()
 
     def is_done(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done()")
@@ -177,10 +194,6 @@ class Hangman(
             self.word_list = list(filter(con,self.word_list))
             # print("total word",len(self.word_list))
 
-    def wait_and_get_bot_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
-        self.wait_and_get_bot_message()
-        self.start_game()
 
     
 
@@ -219,9 +232,7 @@ class Hangman(
             self.incorrect_letters = incorrect_letters[0].split(',')
             set_difference = set(self.starter_letters) - set(self.incorrect_letters)
             self.starter_letters = list(set_difference)
-            # self.starter_letters = list(filter(lambda x:  x not in self.incorrect_letters and x not in [l.lower() for l in re.findall(r'([a-z])',self.current_pattern,re.I)],self.starter_letters))
-            # print('incorrect letters',self.incorrect_letters)
-            # print('starter letters',self.starter_letters)
+            
             
 
 
@@ -238,10 +249,11 @@ class Hangman(
         live = re.findall(r"have (\d+) lives",text,re.I)
         if live:
             self.live = live[0]
-            # print("live",self.live)
+            
 
     def restart(self,*args, **kwargs):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
+        if not self.is_login:self.update_driver()
         self.driver.refresh()
         self.reset()
         self.start_game()
@@ -256,20 +268,20 @@ class Hangman(
 
     def guess(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().guess()")
-        self.tracker.reset()
         if self.starter_letters and not (len(self.word_list)>0 and len(self.word_list) < 40):
             self.send_msg(self.starter_letters.pop(0))
+            self.wait_for_bot_group()
         else:
             letter = self.get_guess_letter()
             if letter:
                 # print("letter found from choice")
                 self.send_msg(choice(letter))
-                self.tracker.wait(3)
+                self.wait_for_bot_group()
             else:
                 # print("no choice")
                 self.reset()
                 self.filter_update_word_list(self.has_length())
-        self.wait_and_get_bot_message()
+        
             
 
     def start_game(self):
@@ -279,18 +291,22 @@ class Hangman(
             for _ in range(10):
                 self.driver.implicitly_wait(10)
                 self.send_msg('!h')
-                self.wait_and_get_bot_message()
+                self.wait_for_bot_group()
                 break
-        except:
-            pass
+        except KeyboardInterrupt:
+            self.close()
+            raise KeyboardInterrupt('stop by keyboard command')
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
 
     def get_wordlist_from_source(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_wordlist_from_source()")
-        if config['Hangman']['from_db']=='yes':
-            self.word_list = [x.word for x in WordList.objects.all()]
-        else:
-            with open('word_list.json') as f:
-                self.word_list = list(json.load(f))
+        self.word_list = [x.word for x in WordList.objects.all()]
+        # if config['Hangman']['from_db']=='yes':
+        #     else:
+        with open('word_list.json') as f:
+            self.word_list += list(json.load(f))
             
 
     def get_guess_letter(self):
@@ -325,44 +341,61 @@ class Hangman(
         self.old_incorrect_letters = list(self.incorrect_letters)
         return lambda word:all([x.strip() not in word[0] for x in list_difference])
 
-
+    def main(self):
+        self.tracker.wait(seconds=1)
+        self.start_game()
+        while not self.is_stop():
+            try:
+                self.is_new_game()
+                self.already_a_game()
+                self.is_question()
+                self.is_correct()
+                self.is_not_correct()
+                self.is_done()
+                self.is_game_over()
+            except KeyboardInterrupt:
+                self.close()
+                raise KeyboardInterrupt('stop by keyboard command')
+            except StopBotError:
+                self.close()
+                raise StopBotError('stop by bot command')
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except Exception as e:
+                print("\n\n error\n",e)
+                self.driver.refresh()
+                self.start_game()
     
 def main():
     username_1 = "Komp@gmail.com"
     password_1 = "123456"
     room_link = 'https://wolf.live/g/18900545'
-    hm = Hangman(username_1,password_1,room_link=room_link)
-    hm.tracker.wait(seconds=1)
-    hm.start_game()
-    hm.tracker.start()
-    while not hm.is_stop():
+    
+    for _ in range(20):
         try:
-            hm.is_new_game()
-            hm.already_a_game()
-            hm.is_question()
-            hm.is_correct()
-            hm.is_not_correct()
-            hm.is_done()
-            hm.is_game_over()
-        except KeyboardInterrupt:
+            hm = Hangman(username_1,password_1,room_link=room_link)
             hm.close()
-            raise KeyboardInterrupt('stop by keyboard command')
-        except StopBotError:
-            hm.close()
-            raise StopBotError('stop by bot command')
-        except Exception as e:
-            print("\n\n error\n",e)
-            hm.driver.refresh()
-            hm.start_game()
-            hm.tracker.reset()
-    hm.close()
+            break
+        except SignalRestartError:
+            continue
+
+    
+
+
+def test():
+    username_1 = "Komp@gmail.com"
+    password_1 = "123456"
+    room_link = 'https://wolf.live/g/18900545'
+    return Hangman(username_1,password_1,room_link=room_link,test=True)
+    
     
 
 
     
     
 # %%
-if __name__ == "__main__":
+if __name__ == "__main__" and "-i" not in sys.argv:
     main()
     
     

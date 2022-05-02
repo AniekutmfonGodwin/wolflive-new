@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_scramble.py
+python %1 bot/solve_scramble.py %1

@@ -11,6 +11,7 @@ class BaseWolfliveStrategyInterface(ABC):
     selectors:List[str]=list()
     __tracker:Tracker
     driver:webdriver.Chrome
+    autoplay:bool = bool()
 
     @abstractmethod
     def goto_group(self):
@@ -108,7 +109,16 @@ class SendMessageStrategyInterface(ABC):
     def send_message_group(self, msg):
         ...
 
+    @abstractmethod
+    def wait_for_bot_group(self,*,count:int=100,delay_in_second:float=0.5)->str:
+        ...
 
+    @abstractmethod
+    def wait_for_message_group(self,text:str,count:int=100,delay_in_second:float=0.5)->str:
+        ...
+
+    
+            
 
 class CheckStrategyInterface(ABC):
 
@@ -134,13 +144,14 @@ class CheckStrategyInterface(ABC):
     def is_login(self)->bool:
         ...
 
+    
+
 
 class LoginStrategyInterface(ABC):
     username:str
     password:str
     private_url:Optional[str] = None
     room_link:Optional[str] = None
-
     
     @abstractmethod
     def set_driver(self):

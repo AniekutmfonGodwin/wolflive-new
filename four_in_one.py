@@ -1,10 +1,15 @@
 # %%
 from dataclasses import dataclass,field
+from strategies.exceptions import SignalRestartError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 import json
 import configparser
+import sys 
+
 config = configparser.ConfigParser()
 config.read('config.ini')
+
+
 # %%
 @dataclass
 class HunterHeroHeistFishing(
@@ -17,12 +22,12 @@ class HunterHeroHeistFishing(
     username:str
     password:str
     room_link:str = field(default_factory=lambda:'https://wolf.live/g/18311932')
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
         self.tracker.wait(2)
-        self.main()
-        self.tracker.start()
+        if not self.test:self.restart()
 
     def run_hunter(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_hunter()")
@@ -39,7 +44,11 @@ class HunterHeroHeistFishing(
             self.send_msg("!hunt")
 
     def restart(self):
-        return self.main()
+        try:
+            return self.main()
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
 
     def run_fishing(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run_fishing()")
@@ -75,7 +84,6 @@ class HunterHeroHeistFishing(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start()
         while not self.is_stop():
             if config['Fishing']['play'].lower() =='yes':
                 self.run_fishing() 
@@ -89,7 +97,6 @@ class HunterHeroHeistFishing(
             if config['Hunter']['play'].lower() =='yes':
                 self.run_hunter()
             self.tracker.wait(60)
-            self.tracker.reset()
         
 
     
@@ -98,7 +105,22 @@ def main():
     username_1 = "Komp@gmail.com"
     password_1 = "123456"
     room_link = 'https://wolf.live/g/18900545'
-    HunterHeroHeistFishing(username_1,password_1,room_link)
+    for _ in range(20):
+        try:
+            HunterHeroHeistFishing(username_1,password_1,room_link)
+        except SignalRestartError:
+            continue
+
+def test():
+    username_1 = "Komp@gmail.com"
+    password_1 = "123456"
+    room_link = 'https://wolf.live/g/18900545'
+    for _ in range(20):
+        try:
+            return HunterHeroHeistFishing(username_1,password_1,room_link,test=True)
+        except SignalRestartError:
+            continue
+
     
 
 
@@ -106,7 +128,7 @@ def main():
     
     
 # %%
-if __name__ == "__main__":
+if __name__ == "__main__" and "-i" not in sys.argv:
     main()
     
 

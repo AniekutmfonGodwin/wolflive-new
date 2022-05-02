@@ -6,10 +6,16 @@ import requests
 from bs4 import BeautifulSoup
 from time import sleep
 from game.models import Gap
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 from workspace import workspace
+from pathlib import Path
+import configparser
+import sys
 
+config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
+config = configparser.ConfigParser()
+config.read(config_file)
 
 
 
@@ -49,17 +55,20 @@ class SolveFillTheGap(
     game_start:Optional[bool] = field(default_factory=bool)
     stop:Optional[bool] = field(default_factory=bool)
     timer:Optional[Any] = field(default_factory=lambda:None)
-    
+    loop_count:Optional[Any] = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
-    
+        self.autoplay = "on" in config["SolveFillTheGap"]["autoplay"]
+        if not self.test:self.restart()
+
+
     def restart(self):
         return self.run()
 
     def run(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run()")
-        self.tracker.start()
         self.workspace = {
             "question":None,
             "anwser":None,
@@ -74,26 +83,19 @@ class SolveFillTheGap(
 
 
         # method setup auto play 
-        self.setup_status()
+        command = f'!gap autoplay ' + (self.category or "")
+        self.set_autoplay(command)
         if self.autoplay:
             while True and not self.stop:
-                    self.main()
-                # try:
-                # except:
-                #     print("refreashing browser")
-                #     self.browser.driver.refresh()
-                #     sleep(5)
-                #     continue
+                self.main()
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)):
-                    if self.stop:break
-                    self.main()
-                # try:
-                    
-                # except Exception as e:
-                #     print("refreashing browser",e)
-                #     self.browser.driver.refresh()
-                #     sleep(5)
+            self.loop_count = self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
+            for _ in range(self.loop_count):
+                self.loop_count -=1
+                if self.stop:break
+                self.main()
+            raise StopBotError
+                
         
         
     def get_answer(self):
@@ -106,52 +108,12 @@ class SolveFillTheGap(
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().get_answer({e})")
 
-
-
-    def setup_status(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
-        """method set autoplay mode"""
-        if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
-            self.autoplay = True
-        status = self.check_autoplay_status()
-        if status=='ON':
-            if not self.autoplay:
-                self.toggle_autoplay()
-        elif status=='OFF':
-            if self.autoplay:
-                self.toggle_autoplay()
-        
-        
-
-
-    
-    def check_autoplay_status(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
-        """method check for the current autoplay status"""
-        self.send_msg('!gap autoplay Music')
-        self.wait_for_message_group('!gap autoplay Music')
-        response = self.wait_for_bot_group()
-        res =  re.findall(r'Autoplay .* (On|Off)',response,re.I)
-        if res:
-            return res[0]
-        else:
-            False
-        
-
-    def toggle_autoplay(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
-        """method toggle autoplay"""
-        command = None
-        if self.category:
-            command = f'!gap autoplay {self.category}'
-            self.send_msg(command)
-        else:
-            command = f'!gap autoplay'
-            self.send_msg(command)
-        self.wait_for_message_group(command)
 
 
     def main(self):
@@ -256,9 +218,14 @@ class SolveFillTheGap(
                 raise StopBotError
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().start_game({e})")
                 continue
+
+        
 
     def start_game_by_pass(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().start_game_by_pass()")
@@ -275,6 +242,9 @@ class SolveFillTheGap(
                 raise StopBotError
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().start_game_by_pass({e})")
                 continue
@@ -293,6 +263,9 @@ class SolveFillTheGap(
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game({e}) ")
             self.driver.refresh()
@@ -308,6 +281,9 @@ class SolveFillTheGap(
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().is_bot({e})")
             self.driver.refresh()
@@ -327,6 +303,9 @@ class SolveFillTheGap(
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().get_question({e})")
             return False
@@ -339,6 +318,9 @@ class SolveFillTheGap(
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_category({e}) error")
             return False
@@ -403,13 +385,16 @@ class SolveFillTheGap(
 
                             pattern_words = re.findall(r'[a-zA-Z0-9\']+',pattern)
                             answer_words = re.findall(r'[a-zA-Z0-9\']+',answer_raw[0])
-                            answer = list(filter(check,answer_words))[0]
+                            answer:str = list(filter(check,answer_words))[0]
                             print(f"\n\n [{self.__class__}]{self.__class__.__name__}().predict({answer.strip()}) using request")
                             return answer.strip()
         except StopBotError:
             raise StopBotError
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().predict({e})")
             return None
@@ -421,18 +406,21 @@ def main():
     room_link = 'https://wolf.live/g/18900545'
     
     s:SolveFillTheGap = None
-    for _ in range(5):
+    for _ in range(20):
         try:
-            s = SolveFillTheGap(username_1, password_1,room_link)
-            s.run()
+            s = SolveFillTheGap(username_1, password_1,room_link,loop_count=getattr(SolveFillTheGap,"loop_count",0))
+            if s:s.close()
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt()
         except StopBotError:
-            raise StopBotError()
+            raise StopBotError
+        except SignalRestartError:
+            print("signal restart running")
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
-            if s:s.close()
+            
             continue
     
     sleep(2)
@@ -440,7 +428,7 @@ def main():
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
         
         

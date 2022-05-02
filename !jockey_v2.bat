@@ -1,2 +1,2 @@
 @echo off
-python jockey_bot_v2.py %1
+python %1 jockey_bot_v2.py %1

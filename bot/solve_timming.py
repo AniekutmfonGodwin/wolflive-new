@@ -2,9 +2,15 @@ from dataclasses import dataclass,field
 import re
 from typing import Any, Dict
 from main import *
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
+from pathlib import Path
+import configparser
+import sys
 
+config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
+config = configparser.ConfigParser()
+config.read(config_file)
 
 commands = {
     "is_question":r"لعبة فردية:",
@@ -39,30 +45,43 @@ class SolveTimming(
     room_link:str
     stop:bool = field(default_factory=bool)
     commands:Dict[str,Any] = field(default_factory=lambda: commands_en)
+    test:bool = field(default_factory=bool)
+    autoplay:bool = field(default_factory=bool)
+    bot_start_game:bool = field(default_factory=bool)
+    
 
     def __post_init__(self):
         self.login()
-        self.options = input("choose an option\n1)bot start game\n2)user start game\n==> ")
+        if not self.test:
+            self.autoplay = config["Timing"]["autoplay"].lower().strip() in ["on","yes","1",1]
+            self.bot_start_game = config["Timing"]["bot_start_game"].lower().strip() in ["yes","1",1]
+            self.set_autoplay("!timing autoplay")
+            if not self.test:self.restart()
+    
+    
+
+    def restart(self):
         while True and not self.stop:
             try:
                 self.main()
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print("error occurred\n",e)
 
-    def restart(self):
-        return self.main()
-
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        if self.options == '1':self.start_game()
-        self.tracker.start()
+        if self.bot_start_game:self.start_game()
+                
         while True:
             if self.is_question():
                 answer =  self.get_answer()
                 print("\n\n answer\nإجابة",answer)
                 if answer:
                     self.tracker.wait(float(answer[1])-1.6)
-                    self.tracker.reset()
                     if self.is_stop():
                         self.stop = True
                         print("\n\n stopped game")
@@ -77,11 +96,12 @@ class SolveTimming(
 
             if self.is_gameover():
                 print("game over\nانتهت اللعبة")
-                break
+                self.start_game()
 
             if self.is_done():
                 print("we have a winner\nلدينا فائز")
-                break
+                if not self.autoplay:
+                    self.start_game()
 
 
     def wait_and_get_bot_message(self):
@@ -120,6 +140,9 @@ class SolveTimming(
             raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             self.driver.refresh()
             print(f"\n\n error\n\n[{self.__class__}]{self.__class__.__name__}().is_stop_game({e})")
@@ -136,6 +159,9 @@ class SolveTimming(
                 raise KeyboardInterrupt
             except StopBotError:
                 raise StopBotError
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print(f"\n\n error \n\n[{self.__class__}]{self.__class__.__name__}().start_game({e})")
                 continue
@@ -153,12 +179,14 @@ def main():
     
     for _ in range(5):
         try:
-            browser = SolveTimming(username_1, password_1,room_link)
+            browser:SolveTimming = SolveTimming(username_1, password_1,room_link)
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -177,14 +205,17 @@ def test():
     
     for _ in range(5):
         try:
-            browser = SolveTimming(username_1, password_1,room_link)
+            browser = SolveTimming(username_1, password_1,room_link,test=True)
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
+            if browser and browser.driver:browser.driver.quit()
             continue
     return browser
     # if browser:browser.driver.quit()
@@ -192,7 +223,7 @@ def test():
     
     
 
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
 
 

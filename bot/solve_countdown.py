@@ -2,11 +2,18 @@
 from dataclasses import dataclass,field
 import re
 from main import *
-import main
+import main as mymain
 from countdown_numbers_solver import get_expression_from_data
 from time import sleep
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
+from pathlib import Path
+import configparser
+import sys
 
+config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
+config = configparser.ConfigParser()
+config.read(config_file)
 
 
 
@@ -28,73 +35,68 @@ class SolveCountdown(
     autoplay:bool = field(default_factory=bool,init=False)
     game_start:bool = field(default_factory=bool,init=False)
     stop:bool = field(default_factory=bool,init=False)
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
-        self.setup_status()
+        self.autoplay = config["Countdown"]["autoplay"].lower().strip() in ["on","1",1]
+        self.set_autoplay('!cd autoplay')
+        if not self.test:self.restart()
 
 
     def restart(self):
         return self.run()
     
     def run(self):
-        self.tracker.start()
         if self.autoplay:
             while True and not self.stop:
                 try:
                     self.main()
                 except KeyboardInterrupt:
-                    raise KeyboardInterrupt()
+                    raise KeyboardInterrupt
+                except StopBotError:
+                    raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            self.loop_count = self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
+            for _ in range(self.loop_count):
+                self.loop_count -=1
                 try:
                     if self.stop:break
                     self.main()
                 except KeyboardInterrupt:
-                    raise KeyboardInterrupt()
+                    raise KeyboardInterrupt
+                except StopBotError:
+                    raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except Exception as e:
                     print("error from main method\n",e)
+            raise StopBotError
 
 
 
-
-    def setup_status(self):
-        if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
-            self.autoplay = True
-        status = self.check_autoplay_status()
-        if status=='ON':
-            if not self.autoplay:
-                self.toggle_autoplay()
-        elif status=='OFF':
-            if self.autoplay:
-                self.toggle_autoplay()
-        else:
-            self.toggle_autoplay()
-    
-    def check_autoplay_status(self):
-        self.send_msg('!cd autoplay')
-        self.wait_and_get_user_message()
-        response = self.wait_and_get_bot_message()
-        res =  re.findall(r'Autoplay is turned (ON|OFF)',str(response),re.I)
-        if res:
-            return res[0]
-        else:
-            False
-        
-
-    def toggle_autoplay(self):
-        self.send_msg('!cd autoplay')
-        self.tracker.wait(5)
 
 
     def is_stop_game(self):
         try:
             return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
         except KeyboardInterrupt:
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except:
             self.driver.refresh()
             return
@@ -109,7 +111,12 @@ class SolveCountdown(
             values = [int(x) for x in re.findall(r'\d+',data[1])]
             return {"target":target,"values":values}
         except KeyboardInterrupt:
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except:
             return False
 
@@ -118,7 +125,12 @@ class SolveCountdown(
             if re.search(r'Calculate',text,re.IGNORECASE):
                 return text
         except KeyboardInterrupt:
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except:
             return False
 
@@ -146,20 +158,6 @@ class SolveCountdown(
         return expression
 
 
-    def wait_and_get_bot_message(self):
-        self.get_last_element()
-        for _ in range(40):
-            text = self.get_last_element().text
-            if re.search('bot\n',text,re.IGNORECASE):
-                return text
-        sleep(1)
-
-    def wait_and_get_user_message(self):
-        for _ in range(40):
-            text = self.get_last_element().text
-            if not re.search('bot\n',text,re.IGNORECASE):
-                return text
-        sleep(1)
 
 
     def is_gameover(self):
@@ -182,14 +180,19 @@ class SolveCountdown(
 
                 break
             except KeyboardInterrupt:
-                raise KeyboardInterrupt()
+                raise KeyboardInterrupt
+            except StopBotError:
+                raise StopBotError
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except:
                 continue
         
 
         while True:
             print("game start\nwaiting for bot")
-            text = self.wait_and_get_bot_message()
+            text = self.wait_for_bot_group()
             if self.is_gameover():
                 print("game over")
                 self.game_start = False
@@ -203,7 +206,6 @@ class SolveCountdown(
             if self.is_countdown_question(text=text):
                 question_data = self.get_countdown_question_data(text=text)
                 print("question data",question_data)
-                self.tracker.reset()
                 # {"target":target,"values":values}
                 if question_data:
                     expression = get_expression_from_data(question_data['target'],question_data['values'])
@@ -222,29 +224,24 @@ def main():
     # password_2 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     sc:SolveCountdown = None
-    for _ in range(5):
+    for _ in range(10):
         try:
-            sc = SolveCountdown(username_1, password_1,room_link)
-            sc.run()
+            sc = SolveCountdown(username_1, password_1,room_link,loop_count=getattr(SolveCountdown,"loop_count",0))
+            sc.close()
             break
         except KeyboardInterrupt:
             print("interrupt")
-            break
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            continue
         except:
             print("no internet conenction,re-trying...")
             continue
     
     
-    if sc:sc.tracker.wait(2)
-    if sc:sc.close()
+    
         
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
-
-# %%
-# main()
-        
-            
-            
-        
-# %%

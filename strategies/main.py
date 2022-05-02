@@ -5,7 +5,7 @@ import re
 from typing import List, Optional
 from query_builder import QueryBuilder
 from selenium import webdriver
-from strategies.exceptions import StopBot, StopBotError
+from strategies.exceptions import  StopBotError
 from strategies.interfaces import BaseWolfliveStrategyInterface, CheckStrategyInterface, GetMessageStrategyInterface, LoginStrategyInterface, SendMessageStrategyInterface
 from utils.helpers import Tracker
 from selenium.common.exceptions import TimeoutException
@@ -277,6 +277,7 @@ class CheckStrategy(BaseWolfliveStrategyInterface,LoginStrategyInterface,GetMess
 
 
 class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterface,CheckStrategyInterface):
+    autoplay:bool = bool()
     """responsible for output actions
 
     Args:
@@ -307,20 +308,38 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
                 self.driver.refresh()
                 self.tracker.wait(5)
     
-    def wait_for_bot_group(self,*,count=500,delay_in_second=0.5):
+    def wait_for_bot_group(self,*,count=1800,delay_in_second=0.5):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
-        for _ in range(count):
+        for _count in range(count):
             if "bot" in self.get_last_element().text.lower():break
             self.tracker.wait(delay_in_second)
+            self.tracker.signal_restart(_count+1*delay_in_second)
         return self.get_last_element().text
 
-    def wait_for_message_group(self,text,count=500,delay_in_second=0.5):
+    def wait_for_message_group(self,text,count=1800,delay_in_second=0.5):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
-        for _ in range(count):
+        for _count in range(count):
             if text in self.get_last_msg():break
             self.tracker.wait(delay_in_second)
-
+            self.tracker.signal_restart(_count+1*delay_in_second)
         return self.get_last_msg()
+
+    def wait_for_bot_private(self,*,count=1800,delay_in_second=0.5):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
+        for _count in range(count):
+            if "bot" in self.get_last_message_private().lower():break
+            self.tracker.wait(delay_in_second)
+            self.tracker.signal_restart(_count+1*delay_in_second)
+        return self.get_last_message_private()
+
+    def wait_for_message_private(self,text,count=1800,delay_in_second=0.5):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot(count={count},delay_in_second={delay_in_second})")
+        for _count in range(count):
+            if text in self.get_last_message_private():break
+            self.tracker.wait(delay_in_second)
+            self.tracker.signal_restart(_count+1*delay_in_second)
+
+        return self.get_last_message_private()
             
 
 
@@ -348,15 +367,71 @@ class SendMessageStrategy(BaseWolfliveStrategyInterface,GetMessageStrategyInterf
         if config_section and config[config_section.title()]['autoplay'].upper() not in text:
             self.toggle_autoplay(cmd)
 
-    def change_inbox(self):
+    def set_autoplay(self,command,regex=r'Autoplay .* (ON|OFF)'):
+        status = self.check_autoplay_status(command,regex=regex)
+        if status.upper()=='ON':
+            if not self.autoplay:
+                self.toggle_autoplay(command)
+        elif status.upper()=='OFF':
+            if self.autoplay:self.toggle_autoplay(command)
+        
+
+    def check_autoplay_status(self,command,regex=r'Autoplay .* (ON|OFF)'):
+        self.send_msg(command)
+        response = self.wait_for_bot_group()
+        res =  re.findall(regex,str(response),re.I)
+        if res:
+            return res[0]
+        return ''
+
+
+    def change_inbox(self,private=False):
         if self.is_debug:print(f"\n\n [{self.__class__}]{self.__class__.__name__}().change_inbox()")
-        self.qs.getOneShadowRoot(
-            "route-layout",
-            "sidebar-layout"
-        ).getOne("paper-drawer-panel").getOneShadowRoot(
-            "palringo-sidebar",
-            "paper-tabs"
-        ).getOne("paper-tab[title='Chats']").action(".click()").execute()
+        for _ in range(20):
+            try:
+                self.goto_private() if private else self.goto_group()
+                d = "user" if private else "group"
+                # Enter Msg
+
+                self.qs.getOneShadowRoot(
+                    "route-layout",
+                    "sidebar-layout"
+                ).getOne("paper-drawer-panel").getOneShadowRoot(
+                    "app-routes",
+                    f"{d}-chat-page",
+                    "palringo-chat",
+                    "palringo-chat-input",
+                    "iron-autogrow-textarea",
+                ).getOne("textarea").execute()
+                return True
+            except JavascriptException:
+                self.driver.refresh()
+                self.tracker.wait(5)
+        return False
+
+    def check_inbox(self,private=False):
+        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().change_inbox()")
+        for _ in range(20):
+            try:
+                self.goto_private() if private else self.goto_group()
+                d = "user" if private else "group"
+                # Enter Msg
+
+                self.qs.getOneShadowRoot(
+                    "route-layout",
+                    "sidebar-layout"
+                ).getOne("paper-drawer-panel").getOneShadowRoot(
+                    "app-routes",
+                    f"{d}-chat-page",
+                    "palringo-chat",
+                    "palringo-chat-input",
+                    "iron-autogrow-textarea",
+                ).getOne("textarea").execute()
+                return True
+            except JavascriptException:
+                self.driver.refresh()
+                self.tracker.wait(5)
+        return False
 
 
 
@@ -370,8 +445,10 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
 
     def set_driver(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().set_driver()")
-        if getattr(self,"driver",None):
-            self.driver.quit()
+        try:
+            getattr(self,"close",lambda:print("close method does not exist"))()
+        except:
+            pass
         self.driver = webdriver.Chrome(options=chrome_options, executable_path=chromedriver_path)
         self.driver.set_page_load_timeout(80)
         
@@ -383,8 +460,8 @@ class LoginStrategy(BaseWolfliveStrategyInterface,CheckStrategyInterface):
     def login(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().login()")
         try:
-            self.driver.quit()
-        except Exception as e:
+            getattr(self,"close",lambda:print("close method does not exist"))()
+        except:
             pass
 
         assert self.username and self.password,"username and password is required to login bot"

@@ -1,12 +1,13 @@
 # %%
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
-from strategies.exceptions import  StopBotError
+from strategies.exceptions import  SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 from time import sleep
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 import configparser
+import sys
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -26,14 +27,15 @@ class Jockey_Bot_v2(
     password:str
     private_url:Optional[str] ='https://wolf.live/u/80277459'
     room_link:Optional[str] = 'https://wolf.live/g/18900545'
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
+        if not self.test:self.restart()
     
 
     def restart(self, *args, **kwargs):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
-        self.login()
         self.main()
 
     # def get_health(self):
@@ -51,7 +53,7 @@ class Jockey_Bot_v2(
     def get_health(self, index=-1):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_health()")
         self.send_message_private("!jockey view")
-        self.tracker.wait(seconds=3)
+        self.wait_for_bot_private()
 
         for _ in range(5):
             try:
@@ -67,7 +69,11 @@ class Jockey_Bot_v2(
                     percentage = float(percentage)
                     return percentage
                 raise Exception("iframe element does not exist")
-            except:
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except Exception as e:
+                print(e)
                 self.driver.refresh()
                 self.tracker.wait(seconds=10)
 
@@ -76,14 +82,15 @@ class Jockey_Bot_v2(
     def train_for_speed(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_speed()")
         self.send_message_private("!سباق تدريب كل 100")
+        self.wait_for_bot_private()
 
     def race(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().race()")
         self.send_msg("!س جلد")
+        self.wait_for_bot_group()
 
     def is_health_notification(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_health_notification()")
-        self.tracker.reset()
         self.goto_private()
         elements: List[WebElement] = self.get_latest_bot_msgs(private=True)
         if not elements: return
@@ -96,14 +103,15 @@ class Jockey_Bot_v2(
     def train_for_stamina(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_stamina()")
         self.send_message_private("!سباق تدريب كل 100")
+        self.wait_for_bot_private()
 
     def train_for_agile(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().train_for_agile()")
         self.send_message_private("!سباق تدريب كل 100")
+        self.wait_for_bot_private()
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start(hours=2)
         self.tracker.wait(seconds=10)
         race = config["Jockey_v2"]["race"] or 1
         race = int(race)
@@ -130,13 +138,15 @@ class Jockey_Bot_v2(
                     self.tracker.wait(seconds=60)
 
                 self.send_message_private("!jockey train all " + str(train))
-                self.tracker.wait(seconds=10)
-                self.tracker.reset()
+                self.wait_for_bot_private()
                 
             except KeyboardInterrupt:
                 raise KeyboardInterrupt("stop bot by keyboard interrupt")
             except StopBotError:
                 raise StopBotError("stop bot by stop but command")
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception:
                 self.tracker.wait(self.tracker.get_time)
 
@@ -145,16 +155,34 @@ def main():
     # password = "951753"
     username = "Komp@gmail.com"
     password = "123456"
-    j = Jockey_Bot_v2(username, password)
-    j.main()
-    try:
-        j.driver.quit()
-    except:
-        pass
+
+    for _ in range(20):
+        try:
+            j = Jockey_Bot_v2(username, password)
+            j.close()
+            break
+        except SignalRestartError:
+            continue
+
+
+def test():
+    # username = "jeremy.trac@appzily.com"
+    # password = "951753"
+    username = "Komp@gmail.com"
+    password = "123456"
+
+    for _ in range(20):
+        try:
+            return Jockey_Bot_v2(username, password,test=True)
+            
+        except SignalRestartError:
+            continue
+
+    
 
 # %%
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "-i" not in sys.argv:
     main()
 
 # %%

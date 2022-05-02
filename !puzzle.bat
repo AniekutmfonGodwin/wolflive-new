@@ -1,2 +1,2 @@
 @echo off
-python puzzle.py
+python %1 puzzle.py %1

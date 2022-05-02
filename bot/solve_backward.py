@@ -1,7 +1,8 @@
 from dataclasses import dataclass,field
 import re
-import time
+import sys
 from main import *
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
 
 
@@ -21,38 +22,52 @@ class SolveBackward(
     autoplay:bool = field(default_factory=lambda:False,init=False)
     game_start:bool = field(default_factory=lambda:False,init=False)
     stop:bool = field(default_factory=lambda:False,init=False)
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
     def __post_init__(self):
         self.login()
         self.setup_status()
-        self.restart()
+        if not self.test:self.restart()
         
 
 
     def restart(self):
+        if not self.is_login:self.update_driver()
         if self.autoplay:
             while True and not self.stop:
                 try:
                     self.main()
                 except KeyboardInterrupt:
-                    raise KeyboardInterrupt()
+                    raise KeyboardInterrupt
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            for _ in range(self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)):
                 try:
 
                     if self.stop:break
                     self.main()
                 except KeyboardInterrupt:
-                    raise KeyboardInterrupt()
+                    raise KeyboardInterrupt
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except Exception as e:
                     print("error from main method\n",e)
+
+            raise StopBotError
 
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start()
         while True:
             try:
                 if self.autoplay:
@@ -65,7 +80,12 @@ class SolveBackward(
 
                 break
             except KeyboardInterrupt:
-                raise KeyboardInterrupt()
+                raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except StopBotError:
+                raise StopBotError
             except Exception as e:
                 print(e)
                 continue
@@ -79,7 +99,6 @@ class SolveBackward(
 
                     if answer:
                         self.send_msg(answer)
-                        self.tracker.reset()
 
                 if self.is_done(text):
                     print("we have a winner\n",text)
@@ -90,9 +109,14 @@ class SolveBackward(
                     self.stop = True
                     break
             except KeyboardInterrupt:
-                raise KeyboardInterrupt()
+                raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except StopBotError:
+                raise StopBotError
             except Exception as e:
-                raise Exception()
+                raise Exception
             
 
     
@@ -132,6 +156,11 @@ class SolveBackward(
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
             return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
+        except StopBotError:
+            raise StopBotError
         except Exception as e:
             print(e)
             self.driver.refresh()
@@ -166,13 +195,19 @@ def main():
     room_link = 'https://wolf.live/g/18900545'
     
     s:SolveBackward = None
+    SolveBackward.loop_count = int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
     
-    for _ in range(5):
+    for _ in range(10):
         try:
-            s = SolveBackward(username_1, password_1,room_link)
+            s = SolveBackward(username_1, password_1,room_link,loop_count=getattr(SolveBackward,"loop_count",0))
             break
         except KeyboardInterrupt:
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
+        except SignalRestartError:
+            SolveBackward.loop_count = s.loop_count
+            continue
+        except StopBotError:
+            raise StopBotError
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -182,5 +217,5 @@ def main():
     
     if s:s.close()
 
-if __name__ == '__main__':
+if __name__ == '__main__' and not sys.argv[1]:
     main()

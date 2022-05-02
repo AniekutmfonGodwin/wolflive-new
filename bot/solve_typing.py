@@ -1,9 +1,9 @@
 from dataclasses import dataclass,field
 import re
 from main import *
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
-
+import sys
 
 
 @dataclass
@@ -19,10 +19,17 @@ class SolveTyping(
     room_link:str
     autoplay:bool = field(default_factory=bool)
     game_start:bool = field(default_factory=bool)
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
         self.setup_status()
+        if not self.test:self.restart()
+
+
+    def restart(self):
+        if not self.is_login:self.update_driver()
         if self.autoplay:
             while True:
                 try:
@@ -31,22 +38,28 @@ class SolveTyping(
                     raise KeyboardInterrupt
                 except StopBotError:
                     raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            self.loop_count = self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
+            for _ in range(self.loop_count):
+                self.loop_count -=1
                 try:
                     self.main()
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt
                 except StopBotError:
                     raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print("error from main method\n",e)
-
-    def restart(self):
-        return self.main()
+            raise StopBotError
 
     def setup_status(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
@@ -85,7 +98,6 @@ class SolveTyping(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start()
         for _ in range(40):
             try:
                 if self.autoplay:
@@ -97,6 +109,7 @@ class SolveTyping(
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
             except StopBotError:
+                self.close()
                 raise StopBotError
             except Exception as e:
 
@@ -107,7 +120,6 @@ class SolveTyping(
         for _ in range(50):
             text = self.wait_for_bot_group()
             if self.is_question(text):
-                self.tracker.reset()
                 answer =  self.get_answer(text=text)
 
                 if answer:
@@ -140,17 +152,20 @@ def main():
     password_1 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     
-    browser = None
+    browser:SolveTyping = None
     
     
     for _ in range(5):
         try:
-            browser = SolveTyping(username_1, password_1,room_link)
+            browser = SolveTyping(username_1, password_1,room_link,loop_count=getattr(SolveTyping,"loop_count",0))
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            SolveTyping.loop_count = browser.loop_count
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -164,16 +179,19 @@ def test():
     password_1 = '123456'
     room_link = 'https://wolf.live/g/18900545'
     
-    browser = None
+    browser:SolveTyping = None
     
     
     for _ in range(5):
         try:
-            return SolveTyping(username_1, password_1,room_link)
+            return SolveTyping(username_1, password_1,room_link,loop_count=getattr(SolveTyping,"loop_count",0))
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            SolveTyping.loop_count = browser.loop_count
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -182,5 +200,5 @@ def test():
 
     
 
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()

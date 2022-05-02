@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_backward.py
+python %1 bot/solve_backward.py %1

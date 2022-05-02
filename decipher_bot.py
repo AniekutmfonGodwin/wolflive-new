@@ -1,13 +1,12 @@
 # %%
 from dataclasses import dataclass,field
-from strategies.exceptions import StopBotError
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
-from time import sleep
 from bs4 import BeautifulSoup
 import configparser
 config = configparser.ConfigParser()
 config.read('config.ini')
-
+import sys
 
 
 # %%
@@ -23,10 +22,14 @@ class Deciper_Bot(
     password:str
     room_link:str = field(default_factory=lambda:'https://wolf.live/g/18336134')
     stop_agent:bool = field(default_factory=lambda:False)
+    test:bool = field(default_factory=bool)
 
 
     def __post_init__(self):
         self.login()
+        self.autoplay = config['Decipher']['autoplay'].lower().strip() in ["on","1",1]
+        self.set_autoplay("!decipher autoplay")
+        if not self.test:self.restart()
 
     
 
@@ -37,16 +40,7 @@ class Deciper_Bot(
 
     def restart(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().restart()")
-        self.close()
-        self.login()
-        self.send_msg("!decipher next")
-
-    
-    def wait_and_get_user_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_user_message()")
-        for _ in range(50):
-            if self.is_bot() or self.is_stop():return ''
-            self.tracker.wait(0.5)
+        self.main()
 
     
 
@@ -59,14 +53,13 @@ class Deciper_Bot(
             content = self.driver.page_source
             self.driver.switch_to.default_content()
             soup = BeautifulSoup(content, 'html.parser')
-            self.tracker.reset()
             if soup.select_one('.decipher-default'):
                 code = dict([x.text.split(' = ') for x in soup.select('.decipher-default__content__middle__table__text-bubble__text')])
                 decipher_word = list(soup.select_one('.decipher-default__content__footer__word').text)
                 answer = ''.join([code[x] for x in decipher_word])
                 print("answer =",answer,'\n')
                 self.send_msg(answer)
-                self.wait_and_get_user_message()
+                self.wait_for_bot_group()
                 is_question = True
             return is_question
             
@@ -83,7 +76,6 @@ class Deciper_Bot(
     # actions
     def start(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().start()\n")
-        self.check_autoplay('!decipher autoplay','decipher')
         self.tracker.wait(6)
         for _ in range(5):
             try:
@@ -92,6 +84,27 @@ class Deciper_Bot(
             except:
                 pass
 
+    def main(self):
+        self.tracker.wait(4)
+        if not self.get_answer():
+            self.start()
+        
+        while not self.is_stop():
+            try:
+                self.get_answer()
+                self.on_success()
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt("stop bot by keyboard command")
+            except StopBotError:
+                raise StopBotError("stop bot by bot command")
+            except SignalRestartError:
+                raise SignalRestartError
+            except Exception as e:
+                print(e)
+                self.close()
+                raise Exception
+            
+
 
 
 
@@ -99,30 +112,38 @@ def main():
     username_1 = "Komp@gmail.com"
     password_1 = "123456"
     room_link = 'https://wolf.live/g/18900545'
-    d = Deciper_Bot(username_1,password_1,room_link)
-    d.tracker.wait(4)
-    if not d.get_answer():
-        d.start()
-    d.tracker.start(hours=2)
-    while not d.is_stop():
+    d:Deciper_Bot
+    for _ in range(20):
         try:
-            d.get_answer()
-            d.on_success()
+            d = Deciper_Bot(username_1,password_1,room_link)
+            break
         except KeyboardInterrupt:
             raise KeyboardInterrupt("stop bot by keyboard command")
         except StopBotError:
             raise StopBotError("stop bot by bot command")
-        except:
-            d.tracker.wait(d.tracker.get_time)
-        
-        
-        
-        
-    d.close()
-
+        except SignalRestartError:
+            continue
+    if d:d.close()
     
 
+def test():
+    username_1 = "Komp@gmail.com"
+    password_1 = "123456"
+    room_link = 'https://wolf.live/g/18900545'
+    d:Deciper_Bot
+    for _ in range(20):
+        try:
+            return Deciper_Bot(username_1,password_1,room_link,test=True)
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt("stop bot by keyboard command")
+        except StopBotError:
+            raise StopBotError("stop bot by bot command")
+        except SignalRestartError:
+            continue
+        
+    if d:d.close()
+
 # %%
-if __name__ == "__main__":
+if __name__ == "__main__" and "-i" not in sys.argv:
     main()
 

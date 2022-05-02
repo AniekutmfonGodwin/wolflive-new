@@ -7,6 +7,7 @@ from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrat
 from bs4 import BeautifulSoup
 from main import *
 import configparser
+import sys
 
 import logging
 from selenium.common.exceptions import StaleElementReferenceException
@@ -45,10 +46,12 @@ class Puzzle(
     stop_on_user:List[str] = field(default=False)
     stop_play_loop:List[str] = field(default=False)
     stop_loop:List[str] = field(default=False)
+    test:bool = field(default=False)
 
     def __post_init__(self):
         self.login()
         self.reset_moves()
+        if not self.test:self.restart()
 
     # def __init__(self,username,password,room_link=None):
     #     super().__init__(username,password,room_link=room_link)
@@ -68,7 +71,6 @@ class Puzzle(
 
 
     def restart(self):
-        self.login()
         self.run()
     
 
@@ -104,6 +106,7 @@ class Puzzle(
         logger.info("start game")
         print("start game")
         self.send_msg(f"!puzzle start {difficulty}")
+        self.wait_for_bot_group()
 
 
     def end_game(self,*args, **kwargs):
@@ -154,7 +157,7 @@ class Puzzle(
         logger.info("move tile:moves -> "+moves)
         print("move tile:moves -> "+moves)
         self.send_msg(str(moves))
-        self.tracker.wait(3)
+        self.wait_for_bot_group()
         
 
 
@@ -242,10 +245,10 @@ class Puzzle(
 
     def run(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().run()")
+        self.check_inbox()
         self.on_question(func=self.start_game,negate =True,difficulty=config["Puzzle"]["difficulty"])
         logger.info("game start")
         print("game start")
-        
         for _ in range(5):
             if self.is_bot() and self.is_image_msg() and not self.is_stop():break
             print("waiting for bot message")
@@ -279,15 +282,17 @@ class Puzzle(
         logger.info("main loop stop")
         print("main loop stop")
 
+
 def main():
     room_link = 'https://wolf.live/g/18900545'
     private_url ='https://wolf.live/u/80277459'
     username = 'Komp@gmail.com'
     password = '123456'
-    puzzle = Puzzle(username,password,room_link,private_url)
     for _ in range(100):
         try:
-            puzzle.run()
+            puzzle = Puzzle(username,password,room_link,private_url)
+            puzzle.close()
+            break
         except KeyboardInterrupt:
             raise KeyboardInterrupt("stop bot keyboard command")
         except StopBotError:
@@ -295,11 +300,30 @@ def main():
         except StaleElementReferenceException:
             print("element not attach to the dom,refreshing")
             if puzzle.driver:puzzle.driver.refresh()
-        puzzle.tracker.wait(seconds=3)
+
+
+def test():
+    room_link = 'https://wolf.live/g/18900545'
+    private_url ='https://wolf.live/u/80277459'
+    username = 'Komp@gmail.com'
+    password = '123456'
+    for _ in range(100):
+        try:
+            return Puzzle(username,password,room_link,private_url,test=True)
+            
+            
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt("stop bot keyboard command")
+        except StopBotError:
+            raise StopBotError("stop bot bot command")
+        except StaleElementReferenceException:
+            print("element not attach to the dom,refreshing")
+            
+        
 
 
 # %%
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
     
 

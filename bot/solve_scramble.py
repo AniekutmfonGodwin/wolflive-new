@@ -4,9 +4,18 @@ import json
 import time
 from main import *
 from threading import Timer
-from strategies.exceptions import StopBotError
-
+from strategies.exceptions import SignalRestartError, StopBotError
+import os
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
+from pathlib import Path
+import configparser
+import sys
+
+config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
+config = configparser.ConfigParser()
+config.read(config_file)
+
+file_path = os.path.join(Path(__file__).resolve().parent,"words_dictionary.json")
 
 
 
@@ -26,101 +35,63 @@ class SolveScramble(
     game_start:bool = field(default_factory=bool)
     timer:bool = field(default_factory=lambda:None)
     stop_game:bool = field(default_factory=lambda:None)
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
-        # self = browser
-        # self.words_file = words_file_dir
-        # self.autoplay = False
-        # self.game_start = False
-        # self.timer = None
-        # self.stop_game = False
-        self.setup_status()
+        self.autoplay = config["Scramble"]["autoplay"].lower() in ["on",1,"1"]
+        self.set_autoplay('!scramble autoplay')
+        if not self.test:self.restart()
+        
+
+    def restart(self):
         if self.autoplay:
             while True and not self.stop_game:
                 try:
                     self.main()
                 except KeyboardInterrupt:
-                    raise StopBotError
+                    raise KeyboardInterrupt
                 except StopBotError:
                     raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print("error from main method\n",e)
                     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            self.loop_count = self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
+            for _ in range(self.loop_count):
+                self.loop_count -= 1
                 try:
                     self.main()
                     if self.stop_game:break
                 except KeyboardInterrupt:
-                    raise StopBotError
+                    raise KeyboardInterrupt
                 except StopBotError:
                     raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print("error from main method\n",e)
-
-    def restart(self):
-        return self.main()
+            raise StopBotError
 
     
-    def setup_status(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().setup_status()")
-        if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
-            self.autoplay = True
-        status = self.check_autoplay_status()
-        if status=='ON':
-            if not self.autoplay:
-                self.toggle_autoplay()
-        elif status=='OFF':
-            if self.autoplay:
-                self.toggle_autoplay()
-        # else:
-        #     self.toggle_autoplay()
-
-
     
-    def check_autoplay_status(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().check_autoplay_status()")
-        self.send_msg('!scramble autoplay')
-        self.wait_and_get_user_message()
-        response = self.wait_and_get_bot_message()
-        res =  re.findall(r'Autoplay .* (On|Off)',response,re.I)
-        if res:
-            return res[0]
-        else:
-            False
-        
-    
-    def toggle_autoplay(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().toggle_autoplay()")
-        self.send_msg('!scramble autoplay')
-        self.wait_and_get_user_message()
-
-    
-    def wait_and_get_user_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_user_message()")
-        for _ in range(40):
-            text = self.get_last_element().text
-            if not re.search('bot\n',text,re.IGNORECASE):
-                return text
-            self.tracker.wait(1)
-
-    def wait_and_get_bot_message(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_and_get_bot_message()")
-        for _ in range(40):
-            text = self.get_last_element().text
-            if re.search('bot\n',text,re.IGNORECASE):
-                return text
-            self.tracker.wait(1)
 
     def is_stop_game(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game()")
         try:
             return bool(re.findall(r'!stop',self.get_last_msg(),flags=re.IGNORECASE))
         except KeyboardInterrupt:
-            raise StopBotError
+            raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            self.close()
+            raise SignalRestartError
         except Exception as e:
             print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().is_stop_game({e})")
             self.driver.refresh()
@@ -129,27 +100,27 @@ class SolveScramble(
     
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start()
         self.start_game()
         while True:
             
             text = self.get_last_msg()
             if self.is_question(text=text):
-                self.tracker.reset()
-                
                 answers =  self.get_answer(self.get_question(text))
                 if answers:
                     for answer in answers:
                         self.send_msg(answer)
+                        self.wait_for_bot_group()
                         if self.is_done(self.get_last_msg()):
-                            break
                             print("answer is :",answer)
+                            break
 
                     time.sleep(4)
                     if not self.is_done(self.get_last_msg()):
                         self.send_msg('!scramble next')
+                        self.wait_for_bot_group()
                 else:
                     self.send_msg('!scramble next')
+                    self.wait_for_bot_group()
 
                 
 
@@ -195,22 +166,28 @@ class SolveScramble(
                 if self.autoplay:
                     if not self.game_start:
                         self.send_msg('!scramble')
+                        self.wait_for_bot_group()
                     else:
                         self.send_msg('!scramble next')
+                        self.wait_for_bot_group()
                 else:
                     self.send_msg('!scramble')
+                    self.wait_for_bot_group()
                 break
             except KeyboardInterrupt:
                 raise StopBotError
             except StopBotError:
                 raise StopBotError
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print(f"\n\n error \n\n [{self.__class__}]{self.__class__.__name__}().start_game({e})")
                 continue
         self.game_start=True
         
             
-
+    
 
     def is_done(self,text=''):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().is_done()")
@@ -228,10 +205,10 @@ class SolveScramble(
 
 
 def main():
-    import os
+    
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
-    file_path = os.path.join(os.path.dirname(__file__),"words_dictionary.json")
+    
     
     room_link = 'https://wolf.live/g/18900545'
     
@@ -241,12 +218,48 @@ def main():
     
     for _ in range(5):
         try:
-            browser = SolveScramble(username_1, password_1,file_path,room_link)
-            break
+            browser = SolveScramble(username_1, password_1,file_path,room_link,loop_count=getattr(SolveScramble,"loop_count",0))
+            browser.close()
         except KeyboardInterrupt:
-            raise StopBotError
+            raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            SolveScramble.loop_count = browser.loop_count
+            continue
+        except Exception as e:
+            print("error",e)
+            print("no internet conenction,re-trying...")
+            continue
+    
+    
+    
+
+
+def test():
+    
+    username_1 = 'Komp@gmail.com'
+    password_1 = '123456'
+    
+    
+    room_link = 'https://wolf.live/g/18900545'
+    
+
+    browser:SolveScramble = None
+    
+    
+    for _ in range(5):
+        try:
+            return SolveScramble(username_1, password_1,file_path,room_link,loop_count=getattr(SolveScramble,"loop_count",0),test=True)
+            
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            SolveScramble.loop_count = browser.loop_count
+            browser.close()
+            continue
         except Exception as e:
             print("error",e)
             print("no internet conenction,re-trying...")
@@ -257,7 +270,7 @@ def main():
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
 
 

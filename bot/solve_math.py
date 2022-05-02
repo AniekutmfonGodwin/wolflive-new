@@ -1,7 +1,15 @@
 from dataclasses import dataclass,field
 import re
 from main import *
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
+from pathlib import Path
+import configparser
+import sys
+
+config_file = os.path.join(Path(__file__).resolve().parent.parent,"config.ini")
+config = configparser.ConfigParser()
+config.read(config_file)
 
 
 @dataclass
@@ -18,60 +26,45 @@ class SolveMathsBot(
     autoplay:bool = field(default_factory=bool,init=False)
     game_start:bool = field(default_factory=bool,init=False)
     stop:bool = field(default_factory=bool,init=False)
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
-        self.setup_status()
-        self.restart()
+        self.autoplay = config["Math"]["autoplay"].lower().strip() in ["on","yes","1",1]
+        self.set_autoplay("!math autoplay")
+        if not self.test:self.restart()
         
                     
     def restart(self):
-        self.tracker.start()
+        if not self.is_login:self.update_driver()
         if self.autoplay:
             while True and not self.stop:
                 try:
                     self.main()
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except Exception as e:
                     print("error from main method\n")
                     continue
         else:
-            for _ in range(int(input("how many times do you want to play the game?\ne.g 200\n===>"))):
+            self.loop_count = self.loop_count or int(input("how many times do you want to play the game?\ne.g 200\n===>") or 200)
+            for _ in range(self.loop_count):
+                self.loop_count -=1
                 try:
                     if self.stop:break
                     self.main()
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except:
                     continue
-
-    def setup_status(self):
-        if str(input("play game with auto mood (yes/no):\n===>")).lower() == 'yes':
-            self.autoplay = True
-        status = self.check_autoplay_status()
-        if status=='ON':
-            if not self.autoplay:
-                self.toggle_autoplay()
-        elif status=='OFF':
-            if self.autoplay:
-                self.toggle_autoplay()
-        else:
-            self.toggle_autoplay()
-
-
-    
-    def check_autoplay_status(self):
-        self.send_msg('!math autoplay')
-        self.wait_for_message_group("!math autoplay")
-        response = self.wait_for_bot_group()
-        res =  re.findall(r'Autoplay is turned (ON|OFF)',response,re.I)
-        if res:
-            return res[0]
-        else:
-            False
-        
-
-    def toggle_autoplay(self):
-        self.send_msg('!math autoplay')
-        self.wait_for_message_group("!math autoplay")
-
+            raise StopBotError
 
     def start_game(self):
         for _ in range(10):
@@ -81,6 +74,11 @@ class SolveMathsBot(
                     self.wait_for_message_group("!math")
                     self.game_start = True
                     break
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
+                except StopBotError:
+                    raise StopBotError
                 except:
                     self.tracker.wait(1)
                     continue
@@ -100,7 +98,6 @@ class SolveMathsBot(
         while True:
             text = self.wait_for_bot_group()
             if self.is_question(text):
-                self.tracker.reset()
                 answer =  self.get_answer(text=text)
 
                 if answer:
@@ -153,12 +150,17 @@ def main():
 
     browser:SolveMathsBot = None
     
-    for _ in range(5):
+    for _ in range(20):
         try:
-            browser = SolveMathsBot(username_1, password_1,room_link)
+            browser = SolveMathsBot(username_1, password_1,room_link,loop_count=getattr(SolveMathsBot,"loop_count",0))
             break
         except KeyboardInterrupt:
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            SolveMathsBot.loop_count = browser.loop_count
+            continue
         # except Exception as e:
         #     print("no internet conenction,re-trying...",e)
         #     continue
@@ -167,7 +169,36 @@ def main():
     if browser:browser.close()
 
 
-if __name__ == '__main__':
+def test():
+    username_1 = 'Komp@gmail.com'
+    password_1 = '123456'
+    # username_2 = 'Telek@gmail.com'
+    # password_2 = '123456'
+    room_link = 'https://wolf.live/g/18900545'
+    
+
+    browser:SolveMathsBot = None
+    
+    for _ in range(20):
+        try:
+            return SolveMathsBot(username_1, password_1,room_link,test=True,loop_count=getattr(SolveMathsBot,"loop_count",0))
+            
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            SolveMathsBot.loop_count = browser.loop_count
+            continue
+        # except Exception as e:
+        #     print("no internet conenction,re-trying...",e)
+        #     continue
+    
+    
+    if browser:browser.close()
+
+
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
     
     

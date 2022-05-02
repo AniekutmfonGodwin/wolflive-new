@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_timming.py
+python %1 bot/solve_timming.py %1

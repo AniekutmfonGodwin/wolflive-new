@@ -3,6 +3,8 @@ from time import sleep
 from typing import Optional
 from threading import Timer
 
+from strategies.exceptions import SignalRestartError
+
 
 
 
@@ -33,13 +35,20 @@ class Tracker:
     	
     def reset(self,seconds: Optional[float] = 0, days: Optional[float] = 0, microseconds: Optional[float] = 0, milliseconds: Optional[float] = 0, minutes: Optional[float] = 0, hours: Optional[float] = 0, weeks: Optional[float] = 0,*args, **kwargs):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().reset()")
-        self.start(days = days, seconds = seconds, microseconds = microseconds, milliseconds = milliseconds, minutes = minutes, hours = hours , weeks=weeks,*args, **kwargs)
+        # self.start(days = days, seconds = seconds, microseconds = microseconds, milliseconds = milliseconds, minutes = minutes, hours = hours , weeks=weeks,*args, **kwargs)
         return self
 
     def wait(self,seconds: Optional[float] = 0, days: Optional[float] = 0, microseconds: Optional[float] = 0, milliseconds: Optional[float] = 0, minutes: Optional[float] = 0, hours: Optional[float] = 0, weeks: Optional[float] = 0,*args, **kwargs):
         _time:float = timedelta(days = days, seconds = seconds, microseconds = microseconds, milliseconds = milliseconds, minutes = minutes, hours = hours , weeks=weeks,*args, **kwargs).total_seconds()
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}() waiting for "+str(_time)," seconds")
         sleep(_time)
+
+
+    def signal_restart(self,seconds: Optional[float] = 0, days: Optional[float] = 0, microseconds: Optional[float] = 0, milliseconds: Optional[float] = 0, minutes: Optional[float] = 0, hours: Optional[float] = 0, weeks: Optional[float] = 0,*args, **kwargs):
+        _time:float = timedelta(days = days, seconds = seconds, microseconds = microseconds, milliseconds = milliseconds, minutes = minutes, hours = hours , weeks=weeks,*args, **kwargs).total_seconds()
+        if _time>=self.__time:
+            raise SignalRestartError()
+        return self
 
     def start(self,seconds: Optional[float] = 0, days: Optional[float] = 0, microseconds: Optional[float] = 0, milliseconds: Optional[float] = 0, minutes: Optional[float] = 0, hours: Optional[float] = 0, weeks: Optional[float] = 0,*args, **kwargs):
         """start is called if after "sec" second this method is not called"""
@@ -49,9 +58,9 @@ class Tracker:
         self.__time = _time or self.__time
         self.stop()
         self.__task = None
-        self.__task = Timer(self.__time,self.__function)
-        self.__task.setDaemon(True)
-        self.__task.start()
+        # self.__task = Timer(self.__time,self.__function)
+        # self.__task.setDaemon(True)
+        # self.__task.start()
         return self
 
     def stop(self,*args, **kwargs):

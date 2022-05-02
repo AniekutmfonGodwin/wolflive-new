@@ -1,2 +1,2 @@
 @echo off
-python guess_what.py
+python %1 guess_what.py %1

@@ -1,2 +1,2 @@
 @echo off
-python bot/number_detective.py
+python %1 bot/number_detective.py %1

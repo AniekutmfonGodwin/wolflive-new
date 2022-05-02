@@ -17,9 +17,9 @@ from selenium.webdriver.common.action_chains import ActionChains
 # %%
 
 def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/2017/00001/mc1/Not%20Hotdog.png",keyword:list=list()) -> list:
-    print("search called")
+    print(f"searching google for  {url}")
     # searching on google
-    
+    driver.get("https://www.google.com.ng/imghp?hl=en&ogbl")
     
     driver.find_element_by_css_selector("[aria-label='Search by image']").click()
     input_tag = driver.find_element_by_css_selector("[name='image_url']")
@@ -36,8 +36,8 @@ def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/20
         # get wiki result
     try:
         wiki_result = soup.select_one('.kno-ecr-pt span').getText()
-        print("wiki result\n",[re.sub(r"\xa0",'',x) for x in wiki_result],'\n')
-        return [re.sub(r"\xa0",'',x) for x in wiki_result]
+        print("wiki result\n",wiki_result,'\n')
+        return [wiki_result]
     except Exception as e:
         print(e)
         pass
@@ -53,16 +53,16 @@ def search_image_by_google(driver,url:str="https://www.talkwalker.com/uploads/20
 
     
 
-    return ''
+    return []
 
 
 def search_image_by_bing(driver,url:str="https://www.talkwalker.com/uploads/2017/00001/mc1/Not%20Hotdog.png",keyword:list=list()):
-    
-    print("search with bing called")
+    print(f"searching bing for  {url}")
     # Test name: bing search
     # Step # | name | target | value
     # 1 | open | https://www.bing.com/?FORM=Z9FD1 | 
-    driver.get("https://www.bing.com/?FORM=Z9FD1")
+    # driver.get("https://www.bing.com/?FORM=Z9FD1")
+    driver.get("https://www.bing.com/")
     # 2 | setWindowSize | 1382x744 | 
     driver.set_window_size(1382, 744)
     # 3 | click | id=sbi_b | 
@@ -91,7 +91,7 @@ def search_image_by_bing(driver,url:str="https://www.talkwalker.com/uploads/2017
     except Exception as e:
         print("error occur on search ",e)
         pass
-    return ''
+    return []
 
 
 

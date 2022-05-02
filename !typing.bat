@@ -1,2 +1,2 @@
 @echo off
-python bot/solve_typing.py
+python %1 bot/solve_typing.py %1

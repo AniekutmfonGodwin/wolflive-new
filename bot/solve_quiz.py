@@ -1,12 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 import random
-from time import sleep
 from main import *
-import main
-from strategies.exceptions import StopBotError
+import main as mymain
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
-
+import sys
 
 @dataclass
 class SolveQuiz(
@@ -20,39 +19,28 @@ class SolveQuiz(
     password:str
     room_link:str
     private_url:str
+    loop_count:int = field(default_factory=int)
+    test:bool = field(default_factory=bool)
 
     def __post_init__(self):
         self.login()
         self.tracker.wait(5)
-        # self.browser = browser
-        # self.browser.driver.switch_to.window(self.browser.driver.window_handles[0])
+        if not self.test:self.restart()
         
-        for _ in range(int(input("how many time do you want me to play the game \ne.g 10\n"))):
+
+    def restart(self):
+        self.loop_count = self.loop_count or int(input("how many time do you want me to play the game \ne.g 10\n") or 10)
+        loop = int(self.loop_count)
+        for _ in range(loop):
+            self.loop_count -=1
             try:
                 self.main()
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
             except Exception as e:
                 print("error occurred\n",e)
                 continue
-
-    def restart(self):
-        self.main()
-
-    def wait_for_bot_message_private(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot_message_private()")
-        for _ in range(30):
-            if self.is_bot_message_private():
-                return self.get_last_message_private()
-            self.tracker.wait(0.5)
-        return False
-
-    def wait_for_bot_message_grp(self):
-        print(f"\n\n [{self.__class__}]{self.__class__.__name__}().wait_for_bot_message_grp()")
-        for _ in range(30):
-            if self.is_bot_message_grp():
-                return self.get_last_msg()
-            self.tracker.wait(0.5)
-        return False
-            
 
 
     def is_bot_message_grp(self):
@@ -93,8 +81,8 @@ class SolveQuiz(
 
     def get_answer(self,question,choice):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_answer()")
-        if main.Quiz.objects.filter(question=question.get('question')).exists():
-            data = main.Quiz.objects.filter(question=question.get('question')).first()
+        if mymain.Quiz.objects.filter(question=question.get('question')).exists():
+            data = mymain.Quiz.objects.filter(question=question.get('question')).first()
             if data.answer:
                 option = [x for x in list(question)[2:6] if data.answer in question[x]]
                 if option:
@@ -135,51 +123,53 @@ class SolveQuiz(
 
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.tracker.start()
         for _ in range(100):
             self.goto_group()
             for _ in range(10):
                 try:
                     self.send_msg('!quiz private')
+                    self.wait_for_bot_group()
                     break
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt
                 except StopBotError:
                     raise StopBotError
+                except SignalRestartError:
+                    self.close()
+                    raise SignalRestartError
                 except Exception as e:
                     print(f"\n\n error\n\n[{self.__class__}]{self.__class__.__name__}().main({e})")
                     self.tracker.wait(2)
                     continue
 
-            text = str(self.wait_for_bot_message_grp())
+            text = str(self.wait_for_bot_group())
             assert type(text) == str,'bot message in group is not string'
             if self.already_have_a_game(text) or self.bot_send_private_message(text):
                 self.goto_private()
                 for _ in range(10):
-                    text_private = str(self.wait_for_bot_message_private())
+                    text_private = str(self.wait_for_bot_private())
                     assert type(text_private) == str,'bot private message is not string'
-                    # print("question",text_private)
-                    # print(self.is_question(text_private))
+                    
                     if self.is_question(text_private):
                         self.tracker.reset()
                         question = self.get_question_and_options(text_private)
                         
 
                         choice = random.choice(['a','b','c','d'])
-                        if not main.Quiz.objects.filter(question=question.get('question')).exists():
-                            main.Quiz.objects.create(question=question.get("question"),optiona=question.get("optiona"),optionb=question.get("optionb"),optionc=question.get("optionc"),optiond=question.get("optiond"),guess=choice)
+                        if not mymain.Quiz.objects.filter(question=question.get('question')).exists():
+                            mymain.Quiz.objects.create(question=question.get("question"),optiona=question.get("optiona"),optionb=question.get("optionb"),optionc=question.get("optionc"),optiond=question.get("optiond"),guess=choice)
                         answer = self.get_answer(question,choice)
                         # print(answer)
                         self.send_message_private(answer)
                         # self.send_message_private(choice) # this is for test remove in production
-                        response = str(self.wait_for_bot_message_private())
+                        response = str(self.wait_for_bot_private())
                         if self.is_correct(str(response)):
                             print("you got the correct answer")
                             question['answer'] = question.get(f'option{choice}')
                             # print("quetion",question)
                             # self.add(**question)
-                            if main.Quiz.objects.filter(question=question.get("question"),answer='').exists():
-                                qz = main.Quiz.objects.get(question=question.get("question"))
+                            if mymain.Quiz.objects.filter(question=question.get("question"),answer='').exists():
+                                qz = mymain.Quiz.objects.get(question=question.get("question"))
                                 qz.answer = answer=question.get("answer")
                                 qz.save()
                             
@@ -189,7 +179,7 @@ class SolveQuiz(
 
 
 
-def main_():
+def main():
     username_1 = 'Komp@gmail.com'
     password_1 = '123456'
     room_link = 'https://wolf.live/g/18900545'
@@ -200,14 +190,17 @@ def main_():
     
     is_login = False
     
-    for _ in range(5):
+    for _ in range(20):
         try:
-            browser = SolveQuiz(username_1, password_1,room_link,private_url)
+            browser = SolveQuiz(username_1, password_1,room_link,private_url,loop_count=getattr(SolveQuiz,"loop_count",0))
             break
         except KeyboardInterrupt:
-            raise StopBotError
+            raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            SolveQuiz.loop_count = browser.loop_count
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -230,12 +223,14 @@ def test():
     
     for _ in range(5):
         try:
-            return SolveQuiz(username_1, password_1,room_link,private_url)
-            break
+            return SolveQuiz(username_1, password_1,room_link,private_url,test=True)
+            
         except KeyboardInterrupt:
-            raise StopBotError
+            raise KeyboardInterrupt
         except StopBotError:
             raise StopBotError
+        except SignalRestartError:
+            raise SignalRestartError
         except Exception as e:
             print("no internet conenction,re-trying...",e)
             continue
@@ -244,5 +239,5 @@ def test():
     if browser:browser.close()
 
 
-if __name__ == '__main__':
-    main_()
+if __name__ == '__main__' and "-i" not in sys.argv:
+    main()

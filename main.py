@@ -16,9 +16,9 @@ from storage.models import (
 
 
 
-if __name__ == '__main__':
-    word = {'_word':"name"}
+# if __name__ == '__main__':
+#     word = {'_word':"name"}
     
-    WordList.objects.create(**word)
-    print(WordList.objects.all())
+#     WordList.objects.create(**word)
+#     print(WordList.objects.all())
 

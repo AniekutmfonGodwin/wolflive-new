@@ -1,3 +1,3 @@
 @echo off
- python bot/fill_the_gap.py
+ python %1 bot/fill_the_gap.py %1
 

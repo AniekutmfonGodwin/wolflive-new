@@ -2,8 +2,9 @@ from dataclasses import dataclass
 import re
 from time import sleep
 from main import *
+from strategies.exceptions import SignalRestartError, StopBotError
 from strategies.main import BaseWolfliveStrategy, CheckStrategy, GetMessageStrategy, LoginStrategy, SendMessageStrategy
-
+import sys
 
 
 @dataclass
@@ -26,7 +27,9 @@ class WebDriver(
 ##############################################
 
 class SolveNumberDetective:
-    def __init__(self,browser1,browser2):
+    loop_count:int = int()
+    def __init__(self,browser1,browser2,test=False,loop_count:int=int):
+        self.test = test
         self.browser1:WebDriver = browser1
         self.browser2:WebDriver = browser2
         self.browser = [self.browser1,self.browser2]
@@ -52,17 +55,36 @@ class SolveNumberDetective:
             
 
         ]
+        self.loop_count:int = loop_count
+        if not self.test:self.restart()
 
-        for _ in range(int(input("How many time should i play the game e.g 10:\n") or 10)):
+        
 
+    def restart(self):
+        self.loop_count = self.loop_count or int(input("How many time should i play the game e.g 10:\n") or 10)
+        for _ in range(self.loop_count):
+            self.loop_count -=1
             try:
                 self.reset()
                 self.main()
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except StopBotError:
+                raise StopBotError
             except Exception as e:
                 print("error occurred\n",e)
+        raise StopBotError
 
 
-
+    def close(self):
+        try:
+            self.browser1.close()
+            self.browser2.close()
+        except:
+            pass
+        
+    
     def reset(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().reset()")
         self.turn = 0
@@ -136,11 +158,12 @@ class SolveNumberDetective:
             return:
                 bot_message(str)
         """
-        for _ in range(loop):
+        for count in range(loop):
             text =self.browser1.get_last_element().text
             if 'Number Detectives Bot'.lower() in text.lower():
                 return text
             self.browser1.tracker.wait(0.2)
+            self.browser1.tracker.signal_restart(count*0.2)
 
     def get_user_message(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().get_user_message()")
@@ -151,11 +174,13 @@ class SolveNumberDetective:
             return:
                 user message(str)
         """
-        for _ in range(40):
+        for count in range(40):
             text =self.browser1.get_last_msg()
             if 'Number Detectives Bot' not in text:
                 return text
             self.browser1.tracker.wait(1)
+            self.browser1.tracker.signal_restart(count*1)
+
 
     def rotate_turn(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().rotate_turn()")
@@ -195,14 +220,19 @@ class SolveNumberDetective:
     # main(browser1)
     def main(self):
         print(f"\n\n [{self.__class__}]{self.__class__.__name__}().main()")
-        self.browser1.tracker.restart = self.main
-        self.browser1.tracker.start()
+        
         while True:
             try:
                 self.browser1.send_msg('!nd')
+                self.browser1.wait_for_bot_group()
                 break
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
+            except SignalRestartError:
+                self.close()
+                raise SignalRestartError
+            except StopBotError:
+                raise StopBotError
             except Exception as e:
                 print(e)
                 continue
@@ -250,34 +280,39 @@ def main():
     room_link = 'https://wolf.live/g/18900545'
     # from games_bot import WebDriver
 
-    
+    SolveNumberDetective.loop_count = int(input("How many time should i play the game e.g 10:\n") or 10)
 
     browser = None
     browser2 = None
-    is_login = False
+    nd:SolveNumberDetective = None
 
-    for _ in range(5):
+    for _ in range(20):
         try:
             if not browser:
                 browser = WebDriver(username_1, password_1,room_link)
             if not browser2:
                 browser2 = WebDriver(username_2, password_2,room_link)
-            is_login = True
-            break
+            
+            sleep(5)
+            
+            SolveNumberDetective(browser,browser2,loop_count=getattr(SolveNumberDetective,"loop_count",0))
+            
+         
         except KeyboardInterrupt:
-            break
+            raise KeyboardInterrupt
+        except StopBotError:
+            raise StopBotError
+        except SignalRestartError:
+            SolveNumberDetective.loop_count +=1
+
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...\n",e)
             continue
     
-    
-    sleep(5)
-    if is_login:    
-        SolveNumberDetective(browser,browser2)
-        browser.driver.quit()
-        browser2.driver.quit()
     if browser:browser.driver.quit()
     if browser2:browser2.driver.quit()
+      
 
 
 def test():
@@ -288,39 +323,43 @@ def test():
     room_link = 'https://wolf.live/g/18900545'
     # from games_bot import WebDriver
 
-    
+    SolveNumberDetective.loop_count = int(input("How many time should i play the game e.g 10:\n") or 10)
 
     browser = None
     browser2 = None
-    is_login = False
+    nd:SolveNumberDetective = None
 
-    for _ in range(5):
+    for _ in range(20):
         try:
             if not browser:
                 browser = WebDriver(username_1, password_1,room_link)
             if not browser2:
                 browser2 = WebDriver(username_2, password_2,room_link)
-            is_login = True
-            break
+            
+            sleep(5)
+            
+            return SolveNumberDetective(browser,browser2,test=True,loop_count=getattr(SolveNumberDetective,"loop_count",0))
+            
+         
         except KeyboardInterrupt:
             break
+        
+        except SignalRestartError:
+            SolveNumberDetective.loop_count +=1
+
+            continue
         except Exception as e:
             print("no internet conenction,re-trying...\n",e)
             continue
     
-    
-    sleep(2)
-    if is_login:    
-        return SolveNumberDetective(browser,browser2)
-        # browser.driver.quit()
-        # browser2.driver.quit()
     if browser:browser.driver.quit()
     if browser2:browser2.driver.quit()
+        
 
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and "-i" not in sys.argv:
     main()
         
         
